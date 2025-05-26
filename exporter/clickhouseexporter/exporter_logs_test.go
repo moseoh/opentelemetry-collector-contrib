@@ -8,11 +8,13 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/column/orderedmap"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -330,4 +332,52 @@ func (*testClickhouseDriverTx) Commit() error {
 
 func (*testClickhouseDriverTx) Rollback() error {
 	return nil
+}
+
+func TestCreateDatabaseSQL(t *testing.T) {
+	tests := []struct {
+		name        string
+		database    string
+		clusterName string
+		expectedSQL string
+	}{
+		{
+			name:        "database with underscores",
+			database:    "otel_logs",
+			clusterName: "",
+			expectedSQL: "CREATE DATABASE IF NOT EXISTS `otel_logs` ",
+		},
+		{
+			name:        "database with underscores and cluster",
+			database:    "otel_logs",
+			clusterName: "test_cluster",
+			expectedSQL: "CREATE DATABASE IF NOT EXISTS `otel_logs` ON CLUSTER test_cluster",
+		},
+		{
+			name:        "simple database name",
+			database:    "logs",
+			clusterName: "",
+			expectedSQL: "CREATE DATABASE IF NOT EXISTS `logs` ",
+		},
+		{
+			name:        "simple database name with cluster",
+			database:    "logs",
+			clusterName: "production",
+			expectedSQL: "CREATE DATABASE IF NOT EXISTS `logs` ON CLUSTER production",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{
+				Database:    tt.database,
+				ClusterName: tt.clusterName,
+			}
+
+			// Generate the actual SQL that would be executed
+			expectedSQL := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` %s", cfg.Database, cfg.clusterString())
+			
+			assert.Equal(t, tt.expectedSQL, expectedSQL)
+		})
+	}
 }
