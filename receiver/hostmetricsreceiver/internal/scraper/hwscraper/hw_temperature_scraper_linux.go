@@ -194,7 +194,7 @@ func (s *temperatureScraper) scrapeTemperatureSensor(sensor temperatureSensor, t
 	)
 
 	// Record limit metrics if available and enabled
-	if s.mb.config.Metrics.HwTemperatureLimit.Enabled {
+	if s.config.Metrics.HwTemperatureLimit.Enabled {
 		s.scrapeLimitMetrics(sensor, timestamp)
 	}
 
