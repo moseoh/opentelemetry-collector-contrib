@@ -17,6 +17,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal/scraperinttest"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter/filterset"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest/pmetrictest"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/hwscraper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper"
 )
 
@@ -109,6 +110,97 @@ func Test_ProcessScrapeWithBadRootPathAndEnvVar(t *testing.T) {
 		scraperinttest.WithExpectedFile(expectedFile),
 		scraperinttest.WithCompareOptions(
 			pmetrictest.IgnoreResourceMetricsOrder(),
+			pmetrictest.IgnoreMetricValues(),
+			pmetrictest.IgnoreMetricDataPointsOrder(),
+			pmetrictest.IgnoreStartTimestamp(),
+			pmetrictest.IgnoreTimestamp(),
+		),
+	).Run(t)
+}
+
+func Test_HwScrapeWithCustomHwmonPath(t *testing.T) {
+	expectedFile := filepath.Join("testdata", "e2e", "expected_hw.yaml")
+	hwmonPath := filepath.Join("testdata", "e2e", "sys", "class", "hwmon")
+
+	scraperinttest.NewIntegrationTest(
+		NewFactory(),
+		scraperinttest.WithCustomConfig(
+			func(_ *testing.T, cfg component.Config, _ *scraperinttest.ContainerInfo) {
+				rCfg := cfg.(*Config)
+				rCfg.CollectionInterval = time.Second
+				f := hwscraper.NewFactory()
+				hCfg := f.CreateDefaultConfig().(*hwscraper.Config)
+				hCfg.HwmonPath = hwmonPath
+				// Include all device types for testing
+				hCfg.Devices.Types = []string{
+					hwscraper.DeviceTypeCPU,
+					hwscraper.DeviceTypeGPU,
+					hwscraper.DeviceTypeUnknown,
+				}
+				rCfg.Scrapers = map[component.Type]component.Config{
+					f.Type(): hCfg,
+				}
+			}),
+		scraperinttest.WithExpectedFile(expectedFile),
+		scraperinttest.WithCompareOptions(
+			pmetrictest.IgnoreMetricValues(),
+			pmetrictest.IgnoreMetricDataPointsOrder(),
+			pmetrictest.IgnoreStartTimestamp(),
+			pmetrictest.IgnoreTimestamp(),
+		),
+	).Run(t)
+}
+
+func Test_HwScrapeWithCPUOnly(t *testing.T) {
+	expectedFile := filepath.Join("testdata", "e2e", "expected_hw_cpu_only.yaml")
+	hwmonPath := filepath.Join("testdata", "e2e", "sys", "class", "hwmon")
+
+	scraperinttest.NewIntegrationTest(
+		NewFactory(),
+		scraperinttest.WithCustomConfig(
+			func(_ *testing.T, cfg component.Config, _ *scraperinttest.ContainerInfo) {
+				rCfg := cfg.(*Config)
+				rCfg.CollectionInterval = time.Second
+				f := hwscraper.NewFactory()
+				hCfg := f.CreateDefaultConfig().(*hwscraper.Config)
+				hCfg.HwmonPath = hwmonPath
+				// Only include CPU devices
+				hCfg.Devices.Types = []string{hwscraper.DeviceTypeCPU}
+				rCfg.Scrapers = map[component.Type]component.Config{
+					f.Type(): hCfg,
+				}
+			}),
+		scraperinttest.WithExpectedFile(expectedFile),
+		scraperinttest.WithCompareOptions(
+			pmetrictest.IgnoreMetricValues(),
+			pmetrictest.IgnoreMetricDataPointsOrder(),
+			pmetrictest.IgnoreStartTimestamp(),
+			pmetrictest.IgnoreTimestamp(),
+		),
+	).Run(t)
+}
+
+func Test_HwScrapeWithFahrenheit(t *testing.T) {
+	expectedFile := filepath.Join("testdata", "e2e", "expected_hw_fahrenheit.yaml")
+	hwmonPath := filepath.Join("testdata", "e2e", "sys", "class", "hwmon")
+
+	scraperinttest.NewIntegrationTest(
+		NewFactory(),
+		scraperinttest.WithCustomConfig(
+			func(_ *testing.T, cfg component.Config, _ *scraperinttest.ContainerInfo) {
+				rCfg := cfg.(*Config)
+				rCfg.CollectionInterval = time.Second
+				f := hwscraper.NewFactory()
+				hCfg := f.CreateDefaultConfig().(*hwscraper.Config)
+				hCfg.HwmonPath = hwmonPath
+				hCfg.TemperatureUnits = "fahrenheit"
+				hCfg.Devices.Types = []string{hwscraper.DeviceTypeCPU}
+				rCfg.Scrapers = map[component.Type]component.Config{
+					f.Type(): hCfg,
+				}
+			}),
+		scraperinttest.WithExpectedFile(expectedFile),
+		scraperinttest.WithCompareOptions(
 			pmetrictest.IgnoreMetricValues(),
 			pmetrictest.IgnoreMetricDataPointsOrder(),
 			pmetrictest.IgnoreStartTimestamp(),
