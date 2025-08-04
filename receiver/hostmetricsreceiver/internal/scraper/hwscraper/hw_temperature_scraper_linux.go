@@ -195,8 +195,8 @@ func (s *temperatureScraper) createTemperatureSensor(hwmonDir, inputPath, device
 		LimitPaths: map[metadata.AttributeLimitType]string{
 			metadata.AttributeLimitTypeHighDegraded: paths.Max,
 			metadata.AttributeLimitTypeHighCritical: paths.MaxCrit,
-			metadata.AttributeLimitTypeLowCritical:  paths.Min,
-			metadata.AttributeLimitTypeLowDegraded:  paths.MinCrit,
+			metadata.AttributeLimitTypeLowDegraded:  paths.Min,
+			metadata.AttributeLimitTypeLowCritical:  paths.MinCrit,
 		},
 	}
 
