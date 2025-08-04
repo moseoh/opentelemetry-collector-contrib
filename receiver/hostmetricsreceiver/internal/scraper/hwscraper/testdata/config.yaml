@@ -2,20 +2,7 @@ receivers:
   hostmetrics:
     collection_interval: 5s
     scrapers:
-      # cpu:
-      #   metrics:
-      #     system.cpu.utilization:
-      #       enabled: true
-      # memory:
-      #   metrics:
-      #     system.memory.utilization:
-      #       enabled: true
-      # load:
-      # filesystem:
-      #   metrics:
-      #     system.filesystem.utilization:
-      #       enabled: true
-      # network:
+      disk:
       hw:
         metrics:
           hw.status:

@@ -673,7 +673,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rate(system_disk_operations{direction=\"read\", device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m])",
+          "expr": "rate(system_disk_operations_total{direction=\"read\", device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m])",
           "legendFormat": "{{device}} Read IOPS",
           "range": true,
           "refId": "A"
@@ -684,7 +684,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rate(system_disk_operations{direction=\"write\", device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m])",
+          "expr": "rate(system_disk_operations_total{direction=\"write\", device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m])",
           "legendFormat": "{{device}} Write IOPS",
           "range": true,
           "refId": "B"
@@ -792,7 +792,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rate(system_disk_time{device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m]) * 100",
+          "expr": "rate(system_disk_io_time_seconds_total{device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m]) * 100",
           "legendFormat": "{{device}} Utilization",
           "range": true,
           "refId": "A"
@@ -1044,7 +1044,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rate(system_disk_operations{direction=\"read\", device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m]) + rate(system_disk_operations{direction=\"write\", device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m])",
+          "expr": "rate(system_disk_operations_total{direction=\"read\", device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m]) + rate(system_disk_operations_total{direction=\"write\", device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m])",
           "legendFormat": "📊 {{device}} Total IOPS",
           "range": true,
           "refId": "D"
@@ -1055,7 +1055,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rate(system_disk_time{device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m]) * 100",
+          "expr": "rate(system_disk_io_time_seconds_total{device=~\".*nvme.*|.*ssd.*|.*sda.*|.*sdb.*\"}[5m]) * 100",
           "legendFormat": "⚡ {{device}} Utilization",
           "range": true,
           "refId": "E"
