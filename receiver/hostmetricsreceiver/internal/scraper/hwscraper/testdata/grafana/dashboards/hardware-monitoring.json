@@ -149,7 +149,7 @@
                 "aggregations": ["lastNotNull"],
                 "operation": "aggregate"
               },
-              "parent": {
+              "name": {
                 "aggregations": [],
                 "operation": "groupby"
               },
@@ -177,7 +177,7 @@
               "Value #B (lastNotNull)": "Critical Limit",
               "Value #C (lastNotNull)": "Warning Limit", 
               "Value #D (lastNotNull)": "Low Critical",
-              "parent": "Device",
+              "name": "Device",
               "sensor_location": "Sensor"
             }
           }
@@ -191,7 +191,7 @@
               "reducer": "sum"
             },
             "replaceFields": false,
-            "formula": "if($Device == $Sensor, $Device, concat($Device, ' - ', $Sensor))"
+            "formula": "if($name == $Sensor, $name, concat($name, ' - ', $Sensor))"
           }
         }
       ],
@@ -315,17 +315,17 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "hw_temperature_celsius{parent=\"$device\"}",
+          "expr": "hw_temperature_celsius{name=\"$device\"}",
           "legendFormat": "{{sensor_location}}",
           "refId": "A"
         },
         {
-          "expr": "hw_temperature_limit_celsius{parent=\"$device\", limit_type=\"high.critical\"}",
+          "expr": "hw_temperature_limit_celsius{name=\"$device\", limit_type=\"high.critical\"}",
           "legendFormat": "{{sensor_location}} - Critical Limit",
           "refId": "B"
         },
         {
-          "expr": "hw_temperature_limit_celsius{parent=\"$device\", limit_type=\"high.degraded\"}",
+          "expr": "hw_temperature_limit_celsius{name=\"$device\", limit_type=\"high.degraded\"}",
           "legendFormat": "{{sensor_location}} - Warning Limit",
           "refId": "C"
         }
@@ -402,8 +402,8 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "max by (parent) (hw_temperature_celsius)",
-          "legendFormat": "{{parent}} (Max)",
+          "expr": "max by (name) (hw_temperature_celsius)",
+          "legendFormat": "{{name}} (Max)",
           "refId": "A"
         }
       ],
@@ -466,7 +466,7 @@
       "targets": [
         {
           "expr": "hw_temperature_celsius",
-          "legendFormat": "{{parent}} - {{sensor_location}}",
+          "legendFormat": "{{name}} - {{sensor_location}}",
           "refId": "A"
         }
       ],
@@ -531,7 +531,7 @@
       "targets": [
         {
           "expr": "hw_temperature_celsius",
-          "legendFormat": "{{parent}} - {{sensor_location}}",
+          "legendFormat": "{{name}} - {{sensor_location}}",
           "refId": "A"
         }
       ],
@@ -698,8 +698,8 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "(\n  (hw_temperature_celsius < bool hw_temperature_limit_celsius{limit_type=\"high.critical\"}) +\n  (hw_temperature_celsius < bool hw_temperature_limit_celsius{limit_type=\"high.degraded\"})\n) * on(id) group_left(parent, sensor_location) hw_temperature_celsius",
-          "legendFormat": "{{parent}} - {{sensor_location}}",
+          "expr": "(\n  (hw_temperature_celsius < bool hw_temperature_limit_celsius{limit_type=\"high.critical\"}) +\n  (hw_temperature_celsius < bool hw_temperature_limit_celsius{limit_type=\"high.degraded\"})\n) * on(id) group_left(name, sensor_location) hw_temperature_celsius",
+          "legendFormat": "{{name}} - {{sensor_location}}",
           "refId": "A"
         }
       ],
@@ -720,7 +720,7 @@
           "value": "$__all"
         },
         "datasource": "Prometheus",
-        "definition": "label_values(hw_temperature_celsius, parent)",
+        "definition": "label_values(hw_temperature_celsius, name)",
         "hide": 0,
         "includeAll": true,
         "label": "Device",
@@ -728,7 +728,7 @@
         "name": "device",
         "options": [],
         "query": {
-          "query": "label_values(hw_temperature_celsius, parent)",
+          "query": "label_values(hw_temperature_celsius, name)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

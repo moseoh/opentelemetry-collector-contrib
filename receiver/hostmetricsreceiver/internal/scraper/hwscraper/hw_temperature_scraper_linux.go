@@ -188,7 +188,7 @@ func (s *temperatureScraper) createTemperatureSensor(hwmonDir, inputPath, device
 		ID:         sensorID,
 		Name:       deviceName,
 		DeviceType: deviceType,
-		Parent:     deviceName,
+		Parent:     nil,
 		Location:   label,
 		InputPath:  paths.Input,
 		LabelPath:  paths.Label,
