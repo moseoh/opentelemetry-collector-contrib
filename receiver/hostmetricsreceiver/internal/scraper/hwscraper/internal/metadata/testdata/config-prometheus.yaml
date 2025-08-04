@@ -1,0 +1,61 @@
+receivers:
+  hostmetrics:
+    collection_interval: 5s
+    scrapers:
+      # cpu:
+      #   metrics:
+      #     system.cpu.utilization:
+      #       enabled: true
+      # memory:
+      #   metrics:
+      #     system.memory.utilization:
+      #       enabled: true
+      # load:
+      # filesystem:
+      #   metrics:
+      #     system.filesystem.utilization:
+      #       enabled: true
+      # network:
+      hw:
+        metrics:
+          hw.status:
+            enabled: true
+          hw.temperature:
+            enabled: true
+          hw.temperature.limit:
+            enabled: true
+        temperature_units: celsius
+        enable_detailed_metrics: true
+        scan_interval: 10
+        devices:
+          types: ["cpu", "gpu", "network", "physical_disk", "unknown"]
+
+processors:
+  batch:
+    timeout: 10s
+
+exporters:
+  debug:
+    # verbosity: detailed
+    # sampling_initial: 5
+    # sampling_thereafter: 200
+  
+  prometheus:
+    endpoint: "0.0.0.0:28888"
+    resource_to_telemetry_conversion:
+      enabled: true
+
+extensions:
+  zpages:
+    endpoint: localhost:55679
+
+service:
+  extensions: [zpages]
+  telemetry:
+    logs:
+      level: debug
+  pipelines:
+    metrics:
+      receivers: [hostmetrics]
+      processors: [batch]
+      exporters: [debug, prometheus]

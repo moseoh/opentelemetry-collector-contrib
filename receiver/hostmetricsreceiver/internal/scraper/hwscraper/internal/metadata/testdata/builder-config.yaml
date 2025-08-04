@@ -1,0 +1,32 @@
+# NOTE:
+# This builder configuration is NOT used to build any official binary.
+# To see the builder manifests used for official binaries,
+# check https://github.com/open-telemetry/opentelemetry-collector-releases
+#
+# For the OpenTelemetry Collector Contrib official distribution sources, check
+# https://github.com/open-telemetry/opentelemetry-collector-releases/tree/main/distributions/otelcol-contrib
+
+dist:
+  module: github.com/open-telemetry/opentelemetry-collector-contrib/cmd/otelcontribcol
+  name: otelcontribcol
+  description: Local OpenTelemetry Collector Contrib binary, testing only.
+  version: 0.131.0-dev
+  output_path: ./cmd/otelcontribcol
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.131.1-0.20250801020258-8b73477b9810
+  - gomod: go.opentelemetry.io/collector/exporter/nopexporter v0.131.1-0.20250801020258-8b73477b9810
+  - gomod: go.opentelemetry.io/collector/exporter/otlpexporter v0.131.1-0.20250801020258-8b73477b9810
+  - gomod: go.opentelemetry.io/collector/exporter/otlphttpexporter v0.131.1-0.20250801020258-8b73477b9810
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.131.0
+
+receivers:
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.131.0
+
+extensions:
+  - gomod: go.opentelemetry.io/collector/extension/zpagesextension v0.131.1-0.20250801020258-8b73477b9810
+
+processors:
+  - gomod: go.opentelemetry.io/collector/processor/batchprocessor v0.131.1-0.20250801020258-8b73477b9810
+
+replaces:
