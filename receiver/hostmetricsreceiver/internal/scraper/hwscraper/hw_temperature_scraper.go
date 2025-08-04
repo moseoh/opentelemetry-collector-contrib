@@ -4,6 +4,7 @@
 package hwscraper // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/hwscraper"
 
 import (
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -11,27 +12,11 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/hwscraper/internal/metadata"
 )
 
-// Device type constants
+// Temperature validation constants
+// A reasonable temperature range for hardware sensors
 const (
-	DeviceTypeCPU         = "cpu"
-	DeviceTypeGPU         = "gpu"
-	DeviceTypeMotherboard = "motherboard"
-	DeviceTypeStorage     = "storage"
-	DeviceTypePowerSupply = "power_supply"
-	DeviceTypeFan         = "fan"
-	DeviceTypeMemory      = "memory"
-	DeviceTypeUnknown     = "unknown"
-)
-
-// Device name patterns for detection
-var (
-	cpuPatterns         = []string{"cpu", "coretemp", "k10temp", "tctl", "tdie"}
-	gpuPatterns         = []string{"gpu", "nvidia", "amdgpu", "radeon", "nouveau"}
-	storagePatterns     = []string{"nvme", "sata", "hdd", "ssd", "ata", "scsi"}
-	powerPatterns       = []string{"psu", "power", "acpi"}
-	fanPatterns         = []string{"fan"}
-	memoryPatterns      = []string{"memory", "dimm", "ram"}
-	motherboardPatterns = []string{"motherboard", "mainboard", "system", "chassis"}
+	MinValidTemperature = -40000.0 // Extreme cold conditions
+	MaxValidTemperature = 200000.0 // High-end server/industrial equipment
 )
 
 // temperatureScraper scrapes temperature metrics from hardware sensors
@@ -46,13 +31,12 @@ type temperatureScraper struct {
 type temperatureSensor struct {
 	ID         string
 	Name       string
-	DeviceType string
+	DeviceType metadata.AttributeType
 	Parent     string
 	Location   string
-	InputPath  string
-	MaxPath    string
-	CritPath   string
-	LabelPath  string
+	InputPath  string                                 // Temperature value
+	LabelPath  string                                 // Temperature sensor name
+	LimitPaths map[metadata.AttributeLimitType]string // threshold paths with keys matching temperatureLimitFormats
 }
 
 // newTemperatureScraper creates a new temperature scraper
@@ -64,12 +48,24 @@ func newTemperatureScraper(logger *zap.Logger, mb *metadata.MetricsBuilder, cfg 
 	}
 }
 
-// convertTemperature converts temperature from Celsius to the configured unit
-func (s *temperatureScraper) convertTemperature(celsius float64) float64 {
+// convertTemperature converts tempMilliCelsius from Celsius to the configured unit
+func (s *temperatureScraper) convertTemperature(tempMilliCelsius float64) (float64, error) {
+	if !s.isValidTemperature(tempMilliCelsius) {
+		return 0, fmt.Errorf("invalid temperature reading: %.2f°C (outside range %.1f-%.1f°C)",
+			tempMilliCelsius, MinValidTemperature, MaxValidTemperature)
+	}
+
 	switch s.config.TemperatureUnits {
 	case "fahrenheit", "f":
-		return celsius*9/5 + 32
-	default: // celsius
-		return celsius
+		return tempMilliCelsius/1000*9/5 + 32, nil
+	case "celsius", "c":
+		return tempMilliCelsius / 1000, nil
+	default:
+		return 0, fmt.Errorf("invalid temperature_units: %s (must be 'celsius' or 'fahrenheit')", s.config.TemperatureUnits)
 	}
+}
+
+// isValidTemperature performs sanity check on temperature readings
+func (s *temperatureScraper) isValidTemperature(tempMilliCelsius float64) bool {
+	return tempMilliCelsius >= MinValidTemperature && tempMilliCelsius <= MaxValidTemperature
 }

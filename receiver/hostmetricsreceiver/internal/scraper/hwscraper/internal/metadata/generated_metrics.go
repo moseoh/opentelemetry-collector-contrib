@@ -17,24 +17,15 @@ type AttributeLimitType int
 
 const (
 	_ AttributeLimitType = iota
-	AttributeLimitTypeCritical
-	AttributeLimitTypeDegraded
 	AttributeLimitTypeHighCritical
 	AttributeLimitTypeHighDegraded
 	AttributeLimitTypeLowCritical
 	AttributeLimitTypeLowDegraded
-	AttributeLimitTypeMax
-	AttributeLimitTypeThrottled
-	AttributeLimitTypeTurbo
 )
 
 // String returns the string representation of the AttributeLimitType.
 func (av AttributeLimitType) String() string {
 	switch av {
-	case AttributeLimitTypeCritical:
-		return "critical"
-	case AttributeLimitTypeDegraded:
-		return "degraded"
 	case AttributeLimitTypeHighCritical:
 		return "high.critical"
 	case AttributeLimitTypeHighDegraded:
@@ -43,27 +34,16 @@ func (av AttributeLimitType) String() string {
 		return "low.critical"
 	case AttributeLimitTypeLowDegraded:
 		return "low.degraded"
-	case AttributeLimitTypeMax:
-		return "max"
-	case AttributeLimitTypeThrottled:
-		return "throttled"
-	case AttributeLimitTypeTurbo:
-		return "turbo"
 	}
 	return ""
 }
 
 // MapAttributeLimitType is a helper map of string to AttributeLimitType attribute value.
 var MapAttributeLimitType = map[string]AttributeLimitType{
-	"critical":      AttributeLimitTypeCritical,
-	"degraded":      AttributeLimitTypeDegraded,
 	"high.critical": AttributeLimitTypeHighCritical,
 	"high.degraded": AttributeLimitTypeHighDegraded,
 	"low.critical":  AttributeLimitTypeLowCritical,
 	"low.degraded":  AttributeLimitTypeLowDegraded,
-	"max":           AttributeLimitTypeMax,
-	"throttled":     AttributeLimitTypeThrottled,
-	"turbo":         AttributeLimitTypeTurbo,
 }
 
 // AttributeState specifies the value state attribute.

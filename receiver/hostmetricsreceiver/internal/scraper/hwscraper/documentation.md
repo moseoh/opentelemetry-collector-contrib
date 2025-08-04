@@ -70,7 +70,7 @@ Temperature limit in degrees Celsius.
 | Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
 | id | An identifier for the hardware component, unique within the monitored host. | Any Str | false |
-| limit_type | Type of limit for hardware components. | Str: ``critical``, ``degraded``, ``high.critical``, ``high.degraded``, ``low.critical``, ``low.degraded``, ``max``, ``throttled``, ``turbo`` | false |
+| limit_type | Type of limit for hardware components. | Str: ``high.critical``, ``high.degraded``, ``low.critical``, ``low.degraded`` | false |
 | name | An easily-recognizable name for the hardware component. | Any Str | false |
 | parent | Unique identifier of the parent component (typically the id attribute of the enclosure, or disk controller). | Any Str | false |
 | sensor_location | Location of the sensor. | Any Str | false |

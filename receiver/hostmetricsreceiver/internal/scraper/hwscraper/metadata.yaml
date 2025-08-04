@@ -36,7 +36,7 @@ attributes:
   limit_type:
     description: Type of limit for hardware components.
     type: string
-    enum: [critical, degraded, high.critical, high.degraded, low.critical, low.degraded, max, throttled, turbo]
+    enum: [high.critical, high.degraded, low.critical, low.degraded]
 
   state:
     description: The current state of the component.

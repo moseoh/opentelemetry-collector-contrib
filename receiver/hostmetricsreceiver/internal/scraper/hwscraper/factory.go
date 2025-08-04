@@ -30,7 +30,11 @@ func createDefaultConfig() component.Config {
 		ScanInterval:          300,
 		HwmonPath:             "/sys/class/hwmon",
 		Devices: DeviceFilters{
-			Types: []string{DeviceTypeCPU, DeviceTypeGPU, DeviceTypeStorage},
+			Types: []string{
+				metadata.AttributeTypeCpu.String(),
+				metadata.AttributeTypeGpu.String(),
+				metadata.AttributeTypePhysicalDisk.String(),
+			},
 		},
 	}
 }

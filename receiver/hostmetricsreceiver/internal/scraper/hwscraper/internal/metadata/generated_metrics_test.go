@@ -68,7 +68,7 @@ func TestMetricsBuilder(t *testing.T) {
 			mb.RecordHwTemperatureDataPoint(ts, 1, "id-val", "name-val", "parent-val", "sensor_location-val")
 
 			allMetricsCount++
-			mb.RecordHwTemperatureLimitDataPoint(ts, 1, "id-val", AttributeLimitTypeCritical, "name-val", "parent-val", "sensor_location-val")
+			mb.RecordHwTemperatureLimitDataPoint(ts, 1, "id-val", AttributeLimitTypeHighCritical, "name-val", "parent-val", "sensor_location-val")
 
 			res := pcommon.NewResource()
 			metrics := mb.Emit(WithResource(res))
@@ -162,7 +162,7 @@ func TestMetricsBuilder(t *testing.T) {
 					assert.Equal(t, "id-val", attrVal.Str())
 					attrVal, ok = dp.Attributes().Get("limit_type")
 					assert.True(t, ok)
-					assert.Equal(t, "critical", attrVal.Str())
+					assert.Equal(t, "high.critical", attrVal.Str())
 					attrVal, ok = dp.Attributes().Get("name")
 					assert.True(t, ok)
 					assert.Equal(t, "name-val", attrVal.Str())

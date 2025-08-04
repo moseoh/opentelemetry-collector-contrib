@@ -25,6 +25,38 @@ const (
 	defaultHwmonBasePath = "/sys/class/hwmon"
 )
 
+// deviceTypePatterns maps device types to their detection patterns
+var deviceTypePatterns = map[metadata.AttributeType][]string{
+	metadata.AttributeTypeCpu:          {"cpu", "coretemp", "k10temp", "tctl", "tdie"},
+	metadata.AttributeTypeGpu:          {"gpu", "nvidia", "amdgpu", "radeon", "nouveau"},
+	metadata.AttributeTypePhysicalDisk: {"nvme", "sata", "hdd", "ssd", "ata", "scsi"},
+	metadata.AttributeTypePowerSupply:  {"psu", "power", "acpi"},
+	metadata.AttributeTypeFan:          {"fan"},
+	metadata.AttributeTypeMemory:       {"memory", "dimm", "ram"},
+}
+
+// SensorPaths holds all file paths for a temperature sensor
+type SensorPaths struct {
+	Input   string // temp1_input
+	Label   string // temp1_label
+	Max     string // temp1_max
+	MaxCrit string // temp1_crit
+	Min     string // temp1_min
+	MinCrit string // temp1_lcrit
+}
+
+// generateSensorPaths creates all file paths for a temperature sensor
+func (s *temperatureScraper) generateSensorPaths(hwmonDir, sensorIndex string) SensorPaths {
+	return SensorPaths{
+		Input:   filepath.Join(hwmonDir, fmt.Sprintf("temp%s_input", sensorIndex)),
+		Label:   filepath.Join(hwmonDir, fmt.Sprintf("temp%s_label", sensorIndex)),
+		Max:     filepath.Join(hwmonDir, fmt.Sprintf("temp%s_max", sensorIndex)),
+		MaxCrit: filepath.Join(hwmonDir, fmt.Sprintf("temp%s_crit", sensorIndex)),
+		Min:     filepath.Join(hwmonDir, fmt.Sprintf("temp%s_min", sensorIndex)),
+		MinCrit: filepath.Join(hwmonDir, fmt.Sprintf("temp%s_lcrit", sensorIndex)),
+	}
+}
+
 // getHwmonBasePath returns the configured hwmon path or default
 func (s *temperatureScraper) getHwmonBasePath() string {
 	if s.config.HwmonPath != "" {
@@ -105,60 +137,67 @@ func (s *temperatureScraper) scanSensors() error {
 
 // scanHwmonDevice scans a single hwmon device for temperature sensors
 func (s *temperatureScraper) scanHwmonDevice(hwmonDir string) ([]temperatureSensor, error) {
-	deviceName, err := s.readDeviceName(hwmonDir)
+	hwmonDeviceName, err := s.readDeviceName(hwmonDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read device name: %w", err)
 	}
 
 	// Check if this device type should be included
-	deviceType := s.detectDeviceType(deviceName)
-	if !s.shouldIncludeDevice(deviceName, deviceType) {
+	hwmonDeviceType := detectDeviceTypeFromName(hwmonDeviceName)
+	if !s.shouldIncludeDevice(hwmonDeviceName, hwmonDeviceType) {
 		return nil, nil
 	}
 
-	// Find temperature input files
-	tempFiles, err := filepath.Glob(filepath.Join(hwmonDir, "temp*_input"))
+	// Find temperature input files in hwmon device directory
+	tempInputFiles, err := filepath.Glob(filepath.Join(hwmonDir, "temp*_input"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to scan temperature files: %w", err)
 	}
 
-	var sensors []temperatureSensor
+	var temperatureSensors []temperatureSensor
 
-	for _, tempFile := range tempFiles {
-		sensor, err := s.createTemperatureSensor(hwmonDir, tempFile, deviceName, deviceType)
+	for _, tempInputPath := range tempInputFiles {
+		sensor, err := s.createTemperatureSensor(hwmonDir, tempInputPath, hwmonDeviceName, hwmonDeviceType)
 		if err != nil {
-			s.logger.Debug("Failed to create sensor", zap.String("file", tempFile), zap.Error(err))
+			s.logger.Debug("Failed to create sensor", zap.String("file", tempInputPath), zap.Error(err))
 			continue
 		}
-		sensors = append(sensors, sensor)
+		temperatureSensors = append(temperatureSensors, sensor)
 	}
 
-	return sensors, nil
+	return temperatureSensors, nil
 }
 
 // createTemperatureSensor creates a temperature sensor from a temp input file
-func (s *temperatureScraper) createTemperatureSensor(hwmonDir, tempFile, deviceName, deviceType string) (temperatureSensor, error) {
-	// Extract sensor number from filename (e.g., temp1_input -> 1)
-	baseName := filepath.Base(tempFile)
-	sensorNum := strings.TrimSuffix(strings.TrimPrefix(baseName, "temp"), "_input")
+func (s *temperatureScraper) createTemperatureSensor(hwmonDir, inputPath, deviceName string, deviceType metadata.AttributeType) (temperatureSensor, error) {
+	// Extract sensor index from filename (e.g., temp1_input -> 1)
+	filename := filepath.Base(inputPath)
+	sensorIndex := s.extractSensorIndex(filename)
 
-	// Try to read sensor label
-	labelPath := filepath.Join(hwmonDir, fmt.Sprintf("temp%s_label", sensorNum))
-	sensorLabel := s.readOptionalFile(labelPath)
-	if sensorLabel == "" {
-		sensorLabel = fmt.Sprintf("temp%s", sensorNum)
-	}
+	// Generate all sensor file paths
+	paths := s.generateSensorPaths(hwmonDir, sensorIndex)
+
+	// Read sensor label or use default
+	label := s.readSensorLabel(paths.Label, sensorIndex)
+
+	// Generate unique sensor ID
+	hwmonID := filepath.Base(hwmonDir)
+	sensorID := fmt.Sprintf("%s_%s", hwmonID, label)
 
 	sensor := temperatureSensor{
-		ID:         fmt.Sprintf("%s_%s", deviceName, sensorLabel),
-		Name:       fmt.Sprintf("%s %s", deviceName, sensorLabel),
+		ID:         sensorID,
+		Name:       deviceName,
 		DeviceType: deviceType,
 		Parent:     deviceName,
-		Location:   sensorLabel,
-		InputPath:  tempFile,
-		MaxPath:    filepath.Join(hwmonDir, fmt.Sprintf("temp%s_max", sensorNum)),
-		CritPath:   filepath.Join(hwmonDir, fmt.Sprintf("temp%s_crit", sensorNum)),
-		LabelPath:  labelPath,
+		Location:   label,
+		InputPath:  paths.Input,
+		LabelPath:  paths.Label,
+		LimitPaths: map[metadata.AttributeLimitType]string{
+			metadata.AttributeLimitTypeHighDegraded: paths.Max,
+			metadata.AttributeLimitTypeHighCritical: paths.MaxCrit,
+			metadata.AttributeLimitTypeLowCritical:  paths.Min,
+			metadata.AttributeLimitTypeLowDegraded:  paths.MinCrit,
+		},
 	}
 
 	return sensor, nil
@@ -167,21 +206,10 @@ func (s *temperatureScraper) createTemperatureSensor(hwmonDir, tempFile, deviceN
 // scrapeTemperatureSensor scrapes metrics from a single temperature sensor
 func (s *temperatureScraper) scrapeTemperatureSensor(sensor temperatureSensor, timestamp time.Time) error {
 	// Read current temperature
-	tempStr, err := s.readSensorFile(sensor.InputPath)
+	temperature, err := s.readTemperature(sensor.InputPath)
 	if err != nil {
 		return fmt.Errorf("failed to read temperature: %w", err)
 	}
-
-	tempMilliCelsius, err := strconv.ParseFloat(tempStr, 64)
-	if err != nil {
-		return fmt.Errorf("failed to parse temperature: %w", err)
-	}
-
-	// Convert from millidegrees to degrees Celsius
-	tempCelsius := tempMilliCelsius / 1000.0
-
-	// Convert to desired units
-	temperature := s.convertTemperature(tempCelsius)
 
 	// Record temperature metric
 	s.mb.RecordHwTemperatureDataPoint(
@@ -212,34 +240,25 @@ func (s *temperatureScraper) scrapeTemperatureSensor(sensor temperatureSensor, t
 	return nil
 }
 
-// scrapeLimitMetrics scrapes temperature limit metrics
+// scrapeLimitMetrics scrapes temperature limit metrics for all available thresholds
 func (s *temperatureScraper) scrapeLimitMetrics(sensor temperatureSensor, timestamp time.Time) {
-	// Check for max limit
-	if maxTemp, err := s.readOptionalSensorFile(sensor.MaxPath); err == nil {
-		maxCelsius := maxTemp / 1000.0
-		maxConverted := s.convertTemperature(maxCelsius)
+	for limitType, limitPath := range sensor.LimitPaths {
+		temp, err := s.readTemperature(limitPath)
+		if err != nil {
+			// Limit files are optional, so debug level is appropriate
+			s.logger.Debug("Failed to read temperature limit",
+				zap.String("sensor_id", sensor.ID),
+				zap.String("limit_type", limitType.String()),
+				zap.String("path", limitPath),
+				zap.Error(err))
+			continue
+		}
 
 		s.mb.RecordHwTemperatureLimitDataPoint(
 			pcommon.NewTimestampFromTime(timestamp),
-			maxConverted,
+			temp,
 			sensor.ID,
-			metadata.AttributeLimitTypeMax,
-			sensor.Name,
-			sensor.Parent,
-			sensor.Location,
-		)
-	}
-
-	// Check for critical limit
-	if critTemp, err := s.readOptionalSensorFile(sensor.CritPath); err == nil {
-		critCelsius := critTemp / 1000.0
-		critConverted := s.convertTemperature(critCelsius)
-
-		s.mb.RecordHwTemperatureLimitDataPoint(
-			pcommon.NewTimestampFromTime(timestamp),
-			critConverted,
-			sensor.ID,
-			metadata.AttributeLimitTypeCritical,
+			limitType,
 			sensor.Name,
 			sensor.Parent,
 			sensor.Location,
@@ -249,49 +268,58 @@ func (s *temperatureScraper) scrapeLimitMetrics(sensor temperatureSensor, timest
 
 // Helper functions
 
+// extractSensorIndex extracts sensor index from temp input filename
+func (s *temperatureScraper) extractSensorIndex(filename string) string {
+	return strings.TrimSuffix(strings.TrimPrefix(filename, "temp"), "_input")
+}
+
+// readSensorLabel reads sensor label from file or generates default
+func (s *temperatureScraper) readSensorLabel(labelPath, sensorIndex string) string {
+	if label, _ := s.readFile(labelPath); label != "" {
+		return label
+	}
+	return fmt.Sprintf("temp%s", sensorIndex)
+}
+
 func (s *temperatureScraper) readDeviceName(hwmonDir string) (string, error) {
 	nameFile := filepath.Join(hwmonDir, "name")
-	if name := s.readOptionalFile(nameFile); name != "" {
+	if name, _ := s.readFile(nameFile); name != "" {
 		return name, nil
 	}
 	return filepath.Base(hwmonDir), nil
 }
 
-func (s *temperatureScraper) detectDeviceType(name string) string {
-	return detectDeviceTypeFromName(name)
-}
-
-func (s *temperatureScraper) shouldIncludeDevice(deviceName, deviceType string) bool {
+func (s *temperatureScraper) shouldIncludeDevice(deviceName string, deviceType metadata.AttributeType) bool {
 	// Log unknown device types for debugging
-	if deviceType == DeviceTypeUnknown {
+	if deviceType == metadata.AttributeTypeUnknown {
 		s.logger.Debug("Unknown device type detected",
 			zap.String("device_name", deviceName),
-			zap.String("device_type", deviceType))
+			zap.String("device_type", deviceType.String()))
 	}
 
-	// TODO: Implement include/exclude name patterns
-	// For now, include all devices that pass the type filter
 	if len(s.config.Devices.Types) == 0 {
 		// Include unknown devices by default when no type filter is configured
 		return true
 	}
 
+	deviceTypeStr := deviceType.String()
 	for _, allowedType := range s.config.Devices.Types {
-		if deviceType == allowedType {
+		if deviceTypeStr == allowedType {
 			return true
 		}
 	}
 
-	// Exclude if device type doesn't match any allowed types
+	// Exclude if a device type doesn't match any allowed types
 	s.logger.Debug("Device excluded by type filter",
 		zap.String("device_name", deviceName),
-		zap.String("device_type", deviceType),
+		zap.String("device_type", deviceTypeStr),
 		zap.Strings("allowed_types", s.config.Devices.Types))
 
 	return false
 }
 
-func (s *temperatureScraper) readSensorFile(path string) (string, error) {
+// readFile reads a file and returns its trimmed content
+func (s *temperatureScraper) readFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
@@ -299,50 +327,34 @@ func (s *temperatureScraper) readSensorFile(path string) (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
-func (s *temperatureScraper) readOptionalFile(path string) string {
-	if data, err := os.ReadFile(path); err == nil {
-		return strings.TrimSpace(string(data))
+// readTemperature reads and converts temperature from a sensor file
+func (s *temperatureScraper) readTemperature(path string) (float64, error) {
+	tempStr, err := s.readFile(path)
+	if err != nil {
+		return 0, err
 	}
-	return ""
-}
 
-func (s *temperatureScraper) readOptionalSensorFile(path string) (float64, error) {
-	content := s.readOptionalFile(path)
-	if content == "" {
-		return 0, fmt.Errorf("file not found or empty")
+	tempMilliCelsius, err := strconv.ParseFloat(tempStr, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse temperature: %w", err)
 	}
-	return strconv.ParseFloat(content, 64)
+
+	return s.convertTemperature(tempMilliCelsius)
 }
 
 // detectDeviceTypeFromName attempts to determine a device type from name
-func detectDeviceTypeFromName(name string) string {
+func detectDeviceTypeFromName(name string) metadata.AttributeType {
 	lowerName := strings.ToLower(name)
 
-	// Check each device type pattern
-	if containsAny(lowerName, cpuPatterns) {
-		return DeviceTypeCPU
-	}
-	if containsAny(lowerName, gpuPatterns) {
-		return DeviceTypeGPU
-	}
-	if containsAny(lowerName, storagePatterns) {
-		return DeviceTypeStorage
-	}
-	if containsAny(lowerName, powerPatterns) {
-		return DeviceTypePowerSupply
-	}
-	if containsAny(lowerName, fanPatterns) {
-		return DeviceTypeFan
-	}
-	if containsAny(lowerName, memoryPatterns) {
-		return DeviceTypeMemory
-	}
-	if containsAny(lowerName, motherboardPatterns) {
-		return DeviceTypeMotherboard
+	// Check each device type pattern using the map
+	for deviceType, patterns := range deviceTypePatterns {
+		if containsAny(lowerName, patterns) {
+			return deviceType
+		}
 	}
 
 	// If no pattern matches, return unknown
-	return DeviceTypeUnknown
+	return metadata.AttributeTypeUnknown
 }
 
 // containsAny checks if the input string contains any of the patterns
