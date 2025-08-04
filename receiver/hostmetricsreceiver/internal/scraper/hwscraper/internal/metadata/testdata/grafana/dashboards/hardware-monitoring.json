@@ -111,6 +111,24 @@
           "format": "table",
           "instant": true,
           "refId": "A"
+        },
+        {
+          "expr": "hw_temperature_limit_celsius{limit_type=\"high.critical\"}",
+          "format": "table",
+          "instant": true,
+          "refId": "B"
+        },
+        {
+          "expr": "hw_temperature_limit_celsius{limit_type=\"high.degraded\"}",
+          "format": "table",
+          "instant": true,
+          "refId": "C"
+        },
+        {
+          "expr": "hw_temperature_limit_celsius{limit_type=\"low.critical\"}",
+          "format": "table",
+          "instant": true,
+          "refId": "D"
         }
       ],
       "title": "Hardware Temperature Overview",
@@ -156,6 +174,9 @@
             "indexByName": {},
             "renameByName": {
               "Value (lastNotNull)": "Current Temp",
+              "Value #B (lastNotNull)": "Critical Limit",
+              "Value #C (lastNotNull)": "Warning Limit", 
+              "Value #D (lastNotNull)": "Low Critical",
               "parent": "Device",
               "sensor_location": "Sensor"
             }
@@ -227,7 +248,52 @@
           },
           "unit": "celsius"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*Critical Limit.*"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [10, 10],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp", 
+              "options": ".*Warning Limit.*"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [5, 5],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -252,6 +318,16 @@
           "expr": "hw_temperature_celsius{parent=\"$device\"}",
           "legendFormat": "{{sensor_location}}",
           "refId": "A"
+        },
+        {
+          "expr": "hw_temperature_limit_celsius{parent=\"$device\", limit_type=\"high.critical\"}",
+          "legendFormat": "{{sensor_location}} - Critical Limit",
+          "refId": "B"
+        },
+        {
+          "expr": "hw_temperature_limit_celsius{parent=\"$device\", limit_type=\"high.degraded\"}",
+          "legendFormat": "{{sensor_location}} - Warning Limit",
+          "refId": "C"
         }
       ],
       "title": "Temperature Details - $device",
@@ -399,6 +475,71 @@
     },
     {
       "datasource": "Prometheus",
+      "description": "Temperature gauges with dynamic thresholds based on limit values",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 85
+              }
+            ]
+          },
+          "unit": "celsius"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 6,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "hw_temperature_celsius",
+          "legendFormat": "{{parent}} - {{sensor_location}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperature Gauges with Limits",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -451,8 +592,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 18
+        "x": 0,
+        "y": 26
       },
       "id": 5,
       "options": {
@@ -480,6 +621,90 @@
       ],
       "title": "System Load",
       "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "description": "Temperature safety status based on limit thresholds",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "CRITICAL"
+                },
+                "1": {
+                  "color": "orange", 
+                  "index": 1,
+                  "text": "WARNING"
+                },
+                "2": {
+                  "color": "green",
+                  "index": 2,
+                  "text": "NORMAL"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "max": 2,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "id": 7,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "text": {},
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "(\n  (hw_temperature_celsius < bool hw_temperature_limit_celsius{limit_type=\"high.critical\"}) +\n  (hw_temperature_celsius < bool hw_temperature_limit_celsius{limit_type=\"high.degraded\"})\n) * on(id) group_left(parent, sensor_location) hw_temperature_celsius",
+          "legendFormat": "{{parent}} - {{sensor_location}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Temperature Safety Status",
+      "type": "stat"
     }
   ],
   "refresh": "5s",
