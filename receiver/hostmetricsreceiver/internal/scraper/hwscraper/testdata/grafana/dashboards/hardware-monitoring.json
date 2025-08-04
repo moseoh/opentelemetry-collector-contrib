@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -13,13 +16,16 @@
     ]
   },
   "editable": true,
-  "gnetId": null,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
+  "id": 1,
   "links": [],
   "panels": [
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -27,7 +33,10 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto"
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -35,7 +44,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "yellow",
@@ -69,8 +78,11 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               }
             ]
           },
@@ -81,8 +93,11 @@
             },
             "properties": [
               {
-                "id": "custom.displayMode",
-                "value": "color-background"
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
               }
             ]
           }
@@ -96,6 +111,16 @@
       },
       "id": 1,
       "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
         "showHeader": true,
         "sortBy": [
           {
@@ -104,27 +129,43 @@
           }
         ]
       },
-      "pluginVersion": "8.0.0",
+      "pluginVersion": "12.2.0-16711121739",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "expr": "hw_temperature_celsius",
           "format": "table",
           "instant": true,
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "expr": "hw_temperature_limit_celsius{limit_type=\"high.critical\"}",
           "format": "table",
           "instant": true,
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "expr": "hw_temperature_limit_celsius{limit_type=\"high.degraded\"}",
           "format": "table",
           "instant": true,
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "expr": "hw_temperature_limit_celsius{limit_type=\"low.critical\"}",
           "format": "table",
           "instant": true,
@@ -146,7 +187,9 @@
                 "operation": "groupby"
               },
               "Value": {
-                "aggregations": ["lastNotNull"],
+                "aggregations": [
+                  "lastNotNull"
+                ],
                 "operation": "aggregate"
               },
               "name": {
@@ -173,10 +216,10 @@
             },
             "indexByName": {},
             "renameByName": {
-              "Value (lastNotNull)": "Current Temp",
               "Value #B (lastNotNull)": "Critical Limit",
-              "Value #C (lastNotNull)": "Warning Limit", 
+              "Value #C (lastNotNull)": "Warning Limit",
               "Value #D (lastNotNull)": "Low Critical",
+              "Value (lastNotNull)": "Current Temp",
               "name": "Device",
               "sensor_location": "Sensor"
             }
@@ -186,36 +229,44 @@
           "id": "calculateField",
           "options": {
             "alias": "Display Name",
+            "formula": "if($name == $Sensor, $name, concat($name, ' - ', $Sensor))",
             "mode": "formula",
             "reduce": {
               "reducer": "sum"
             },
-            "replaceFields": false,
-            "formula": "if($name == $Sensor, $name, concat($name, ' - ', $Sensor))"
+            "replaceFields": false
           }
         }
       ],
       "type": "table"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
+              "legend": false,
               "tooltip": false,
-              "viz": false,
-              "legend": false
+              "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -238,7 +289,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               },
               {
                 "color": "red",
@@ -258,37 +309,69 @@
               {
                 "id": "custom.lineStyle",
                 "value": {
-                  "dash": [10, 10],
+                  "dash": [
+                    10,
+                    10
+                  ],
                   "fill": "dash"
                 }
               },
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "red"
+                  "fixedColor": "red",
+                  "mode": "fixed"
                 }
               }
             ]
           },
           {
             "matcher": {
-              "id": "byRegexp", 
+              "id": "byRegexp",
               "options": ".*Warning Limit.*"
             },
             "properties": [
               {
                 "id": "custom.lineStyle",
                 "value": {
-                  "dash": [5, 5],
+                  "dash": [
+                    5,
+                    5
+                  ],
                   "fill": "dash"
                 }
               },
               {
                 "id": "color",
                 "value": {
-                  "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "nvme(Composite)",
+                  "nvme(Composite) - Critical Limit",
+                  "nvme(Composite) - Warning Limit"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
                 }
               }
             ]
@@ -296,37 +379,64 @@
         ]
       },
       "gridPos": {
-        "h": 8,
+        "h": 16,
         "w": 12,
         "x": 0,
         "y": 10
       },
       "id": 2,
       "options": {
-        "tooltip": {
-          "mode": "multi"
-        },
         "legend": {
-          "calcs": ["mean", "lastNotNull", "max"],
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
           "displayMode": "table",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Name",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
         }
       },
-      "pluginVersion": "8.0.0",
+      "pluginVersion": "12.2.0-16711121739",
       "targets": [
         {
-          "expr": "hw_temperature_celsius{name=\"$device\"}",
-          "legendFormat": "{{sensor_location}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "hw_temperature_celsius{name=~\".*$device.*\"}",
+          "legendFormat": "{{name}}({{sensor_location}})",
+          "range": true,
           "refId": "A"
         },
         {
-          "expr": "hw_temperature_limit_celsius{name=\"$device\", limit_type=\"high.critical\"}",
-          "legendFormat": "{{sensor_location}} - Critical Limit",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "hw_temperature_limit_celsius{name=~\".*$device.*\", limit_type=\"high.critical\"}",
+          "legendFormat": "{{name}}({{sensor_location}}) - Critical Limit",
+          "range": true,
           "refId": "B"
         },
         {
-          "expr": "hw_temperature_limit_celsius{name=\"$device\", limit_type=\"high.degraded\"}",
-          "legendFormat": "{{sensor_location}} - Warning Limit",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "hw_temperature_limit_celsius{name=~\".*$device.*\", limit_type=\"high.degraded\"}",
+          "legendFormat": "{{name}}({{sensor_location}}) - Warning Limit",
+          "range": true,
           "refId": "C"
         }
       ],
@@ -334,24 +444,32 @@
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
+              "legend": false,
               "tooltip": false,
-              "viz": false,
-              "legend": false
+              "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -374,357 +492,102 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           },
           "unit": "celsius"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "nvme(Composite) Max",
+                  "nvme(Sensor 1) Max"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
-        "h": 8,
+        "h": 16,
         "w": 12,
         "x": 12,
         "y": 10
       },
       "id": 3,
       "options": {
-        "tooltip": {
-          "mode": "multi"
-        },
         "legend": {
-          "calcs": ["mean", "lastNotNull", "max"],
+          "calcs": [
+            "mean",
+            "lastNotNull",
+            "max"
+          ],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
         }
       },
-      "pluginVersion": "8.0.0",
+      "pluginVersion": "12.2.0-16711121739",
       "targets": [
         {
-          "expr": "max by (name) (hw_temperature_celsius)",
-          "legendFormat": "{{name}} (Max)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "max by (name, sensor_location) (hw_temperature_celsius)",
+          "legendFormat": "{{name}}({{sensor_location}}) Max",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Device Maximum Temperatures",
       "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "description": "Temperature data grouped by device with expandable sensor details",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 50
-              },
-              {
-                "color": "orange",
-                "value": 60
-              },
-              {
-                "color": "red",
-                "value": 70
-              }
-            ]
-          },
-          "unit": "celsius"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 18
-      },
-      "id": 4,
-      "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"],
-          "fields": ""
-        },
-        "showUnfilled": true,
-        "text": {}
-      },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "hw_temperature_celsius",
-          "legendFormat": "{{name}} - {{sensor_location}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Temperature Heatmap",
-      "type": "bargauge"
-    },
-    {
-      "datasource": "Prometheus",
-      "description": "Temperature gauges with dynamic thresholds based on limit values",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 60
-              },
-              {
-                "color": "orange",
-                "value": 75
-              },
-              {
-                "color": "red",
-                "value": 85
-              }
-            ]
-          },
-          "unit": "celsius"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 18
-      },
-      "id": 6,
-      "options": {
-        "orientation": "auto",
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"],
-          "fields": ""
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
-      },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "hw_temperature_celsius",
-          "legendFormat": "{{name}} - {{sensor_location}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Temperature Gauges with Limits",
-      "type": "gauge"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 26
-      },
-      "id": 5,
-      "options": {
-        "tooltip": {
-          "mode": "multi"
-        },
-        "legend": {
-          "calcs": ["mean", "lastNotNull"],
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "system_cpu_utilization * 100",
-          "legendFormat": "CPU Utilization",
-          "refId": "A"
-        },
-        {
-          "expr": "system_memory_utilization * 100",
-          "legendFormat": "Memory Utilization",
-          "refId": "B"
-        }
-      ],
-      "title": "System Load",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "description": "Temperature safety status based on limit thresholds",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "color": "red",
-                  "index": 0,
-                  "text": "CRITICAL"
-                },
-                "1": {
-                  "color": "orange", 
-                  "index": 1,
-                  "text": "WARNING"
-                },
-                "2": {
-                  "color": "green",
-                  "index": 2,
-                  "text": "NORMAL"
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "max": 2,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              },
-              {
-                "color": "green",
-                "value": 2
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 26
-      },
-      "id": 7,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"],
-          "fields": ""
-        },
-        "text": {},
-        "textMode": "value_and_name"
-      },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "(\n  (hw_temperature_celsius < bool hw_temperature_limit_celsius{limit_type=\"high.critical\"}) +\n  (hw_temperature_celsius < bool hw_temperature_limit_celsius{limit_type=\"high.degraded\"})\n) * on(id) group_left(name, sensor_location) hw_temperature_celsius",
-          "legendFormat": "{{name}} - {{sensor_location}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Temperature Safety Status",
-      "type": "stat"
     }
   ],
+  "preload": false,
   "refresh": "5s",
-  "schemaVersion": 30,
-  "style": "dark",
-  "tags": ["hardware", "monitoring", "temperature", "hierarchical"],
+  "schemaVersion": 41,
+  "tags": [
+    "hardware",
+    "monitoring",
+    "temperature",
+    "hierarchical"
+  ],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": false,
           "text": "All",
           "value": "$__all"
         },
         "datasource": "Prometheus",
         "definition": "label_values(hw_temperature_celsius, name)",
-        "hide": 0,
         "includeAll": true,
         "label": "Device",
-        "multi": false,
         "name": "device",
         "options": [],
         "query": {
@@ -733,8 +596,6 @@
         },
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       }
     ]
@@ -747,5 +608,5 @@
   "timezone": "",
   "title": "Hardware Monitoring - Hierarchical View",
   "uid": "hardware-monitoring-hierarchical",
-  "version": 0
+  "version": 1
 }
