@@ -26,11 +26,6 @@ func TestMetricsBuilderConfig(t *testing.T) {
 			name: "all_set",
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
-					HwStatus: HwStatusMetricConfig{
-						Enabled:             true,
-						AggregationStrategy: AggregationStrategySum,
-						EnabledAttributes:   []HwStatusMetricAttributeKey{HwStatusMetricAttributeKeyID, HwStatusMetricAttributeKeyName, HwStatusMetricAttributeKeyParent, HwStatusMetricAttributeKeyState, HwStatusMetricAttributeKeyType},
-					},
 					HwTemperature: HwTemperatureMetricConfig{
 						Enabled:             true,
 						AggregationStrategy: AggregationStrategyAvg,
@@ -48,11 +43,6 @@ func TestMetricsBuilderConfig(t *testing.T) {
 			name: "none_set",
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
-					HwStatus: HwStatusMetricConfig{
-						Enabled:             false,
-						AggregationStrategy: AggregationStrategySum,
-						EnabledAttributes:   []HwStatusMetricAttributeKey{HwStatusMetricAttributeKeyID, HwStatusMetricAttributeKeyName, HwStatusMetricAttributeKeyParent, HwStatusMetricAttributeKeyState, HwStatusMetricAttributeKeyType},
-					},
 					HwTemperature: HwTemperatureMetricConfig{
 						Enabled:             false,
 						AggregationStrategy: AggregationStrategyAvg,
@@ -70,7 +60,7 @@ func TestMetricsBuilderConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := loadMetricsBuilderConfig(t, tt.name)
-			diff := cmp.Diff(tt.want, cfg, cmpopts.IgnoreUnexported(HwStatusMetricConfig{}, HwTemperatureMetricConfig{}, HwTemperatureLimitMetricConfig{}))
+			diff := cmp.Diff(tt.want, cfg, cmpopts.IgnoreUnexported(HwTemperatureMetricConfig{}, HwTemperatureLimitMetricConfig{}))
 			require.Emptyf(t, diff, "Config mismatch (-expected +actual):\n%s", diff)
 		})
 	}

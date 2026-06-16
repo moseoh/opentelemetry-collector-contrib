@@ -138,7 +138,6 @@ func Test_HardwareScrape(t *testing.T) {
 				hCfg := f.CreateDefaultConfig().(*hardwarescraper.Config)
 				hCfg.Temperature.Include.Sensors = []string{".*"}
 				hCfg.MetricsBuilderConfig.Metrics.HwTemperatureLimit.Enabled = true
-				hCfg.MetricsBuilderConfig.Metrics.HwStatus.Enabled = true
 				rCfg.Scrapers = map[component.Type]component.Config{
 					f.Type(): hCfg,
 				}

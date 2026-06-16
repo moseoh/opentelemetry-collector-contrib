@@ -58,7 +58,6 @@ func TestMetricsBuilder(t *testing.T) {
 			settings.Logger = zap.New(observedZapCore)
 			mb := NewMetricsBuilder(loadMetricsBuilderConfig(t, tt.name), settings, WithStartTime(start))
 			aggMap := make(map[string]string) // contains the aggregation strategies for each metric name
-			aggMap["hw.status"] = mb.metricHwStatus.config.AggregationStrategy
 			aggMap["hw.temperature"] = mb.metricHwTemperature.config.AggregationStrategy
 			aggMap["hw.temperature.limit"] = mb.metricHwTemperatureLimit.config.AggregationStrategy
 
@@ -69,12 +68,6 @@ func TestMetricsBuilder(t *testing.T) {
 
 			defaultMetricsCount := 0
 			allMetricsCount := 0
-
-			allMetricsCount++
-			mb.RecordHwStatusDataPoint(ts, 1, "id-val", "name-val", "parent-val", AttributeStateDegraded, AttributeTypeBattery)
-			if tt.name == "reaggregate_set" {
-				mb.RecordHwStatusDataPoint(ts, 3, "id-val-2", "name-val-2", "parent-val-2", AttributeStateFailed, AttributeTypeCPU)
-			}
 
 			defaultMetricsCount++
 			allMetricsCount++
@@ -92,7 +85,6 @@ func TestMetricsBuilder(t *testing.T) {
 			res := pcommon.NewResource()
 			metrics := mb.Emit(WithResource(res))
 			if tt.name == "reaggregate_set" {
-				assert.Empty(t, mb.metricHwStatus.aggDataPoints)
 				assert.Empty(t, mb.metricHwTemperature.aggDataPoints)
 				assert.Empty(t, mb.metricHwTemperatureLimit.aggDataPoints)
 			}
@@ -122,70 +114,6 @@ func TestMetricsBuilder(t *testing.T) {
 			validatedMetrics := make(map[string]bool)
 			for _, mi := range allMetricsList {
 				switch mi.Name() {
-				case "hw.status":
-					if tt.name != "reaggregate_set" {
-						assert.False(t, validatedMetrics["hw.status"], "Found a duplicate in the metrics slice: hw.status")
-						validatedMetrics["hw.status"] = true
-						assert.Equal(t, pmetric.MetricTypeSum, mi.Type())
-						assert.Equal(t, 1, mi.Sum().DataPoints().Len())
-						assert.Equal(t, "Operational status: 1 (true) or 0 (false) for each of the possible states.", mi.Description())
-						assert.Equal(t, "1", mi.Unit())
-						assert.False(t, mi.Sum().IsMonotonic())
-						assert.Equal(t, pmetric.AggregationTemporalityCumulative, mi.Sum().AggregationTemporality())
-						dp := mi.Sum().DataPoints().At(0)
-						assert.Equal(t, start, dp.StartTimestamp())
-						assert.Equal(t, ts, dp.Timestamp())
-						assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
-						assert.Equal(t, int64(1), dp.IntValue())
-						idAttrVal, ok := dp.Attributes().Get("id")
-						assert.True(t, ok)
-						assert.Equal(t, "id-val", idAttrVal.Str())
-						nameAttrVal, ok := dp.Attributes().Get("name")
-						assert.True(t, ok)
-						assert.Equal(t, "name-val", nameAttrVal.Str())
-						parentAttrVal, ok := dp.Attributes().Get("parent")
-						assert.True(t, ok)
-						assert.Equal(t, "parent-val", parentAttrVal.Str())
-						stateAttrVal, ok := dp.Attributes().Get("state")
-						assert.True(t, ok)
-						assert.Equal(t, "degraded", stateAttrVal.Str())
-						typeAttrVal, ok := dp.Attributes().Get("type")
-						assert.True(t, ok)
-						assert.Equal(t, "battery", typeAttrVal.Str())
-					} else {
-						assert.False(t, validatedMetrics["hw.status"], "Found a duplicate in the metrics slice: hw.status")
-						validatedMetrics["hw.status"] = true
-						assert.Equal(t, pmetric.MetricTypeSum, mi.Type())
-						assert.Equal(t, 1, mi.Sum().DataPoints().Len())
-						assert.Equal(t, "Operational status: 1 (true) or 0 (false) for each of the possible states.", mi.Description())
-						assert.Equal(t, "1", mi.Unit())
-						assert.False(t, mi.Sum().IsMonotonic())
-						assert.Equal(t, pmetric.AggregationTemporalityCumulative, mi.Sum().AggregationTemporality())
-						dp := mi.Sum().DataPoints().At(0)
-						assert.Equal(t, start, dp.StartTimestamp())
-						assert.Equal(t, ts, dp.Timestamp())
-						assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
-						switch aggMap["hw.status"] {
-						case "sum":
-							assert.Equal(t, int64(4), dp.IntValue())
-						case "avg":
-							assert.Equal(t, int64(2), dp.IntValue())
-						case "min":
-							assert.Equal(t, int64(1), dp.IntValue())
-						case "max":
-							assert.Equal(t, int64(3), dp.IntValue())
-						}
-						_, ok := dp.Attributes().Get("id")
-						assert.False(t, ok)
-						_, ok = dp.Attributes().Get("name")
-						assert.False(t, ok)
-						_, ok = dp.Attributes().Get("parent")
-						assert.False(t, ok)
-						_, ok = dp.Attributes().Get("state")
-						assert.False(t, ok)
-						_, ok = dp.Attributes().Get("type")
-						assert.False(t, ok)
-					}
 				case "hw.temperature":
 					if tt.name != "reaggregate_set" {
 						assert.False(t, validatedMetrics["hw.temperature"], "Found a duplicate in the metrics slice: hw.temperature")

@@ -19,7 +19,7 @@ import (
 var ErrHwmonUnavailable = errors.New("hwmon not available")
 
 const (
-	hwTemperatureMetricsLen = 3
+	hwTemperatureMetricsLen = 2
 	metricsLen              = hwTemperatureMetricsLen
 )
 

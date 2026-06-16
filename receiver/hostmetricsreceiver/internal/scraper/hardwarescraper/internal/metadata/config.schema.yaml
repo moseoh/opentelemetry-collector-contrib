@@ -4,13 +4,6 @@ $defs:
     description: MetricsConfig provides config for hardware metrics.
     type: object
     properties:
-      hw.status:
-        description: "HwStatusMetricConfig provides config for the hw.status metric."
-        type: object
-        properties:
-          enabled:
-            type: boolean
-            default: false
       hw.temperature:
         description: "HwTemperatureMetricConfig provides config for the hw.temperature metric."
         type: object

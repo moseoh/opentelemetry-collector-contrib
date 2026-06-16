@@ -126,14 +126,9 @@ func TestHwTemperatureScraperScrape_Linux(t *testing.T) {
 	disabledLimitMetric := metadata.NewDefaultMetricsBuilderConfig()
 	disabledLimitMetric.Metrics.HwTemperatureLimit.Enabled = false
 
-	// Disabled status metric
-	disabledStatusMetric := metadata.NewDefaultMetricsBuilderConfig()
-	disabledStatusMetric.Metrics.HwStatus.Enabled = false
-
 	// All metrics enabled
 	allEnabledMetrics := metadata.NewDefaultMetricsBuilderConfig()
 	allEnabledMetrics.Metrics.HwTemperatureLimit.Enabled = true
-	allEnabledMetrics.Metrics.HwStatus.Enabled = true
 
 	testCases := []testCase{
 		{
@@ -145,7 +140,7 @@ func TestHwTemperatureScraperScrape_Linux(t *testing.T) {
 				},
 			},
 			metricsConfig:       metadata.NewDefaultMetricsBuilderConfig(),
-			expectedMetricCount: 1, // hw.temperature only (hw.status disabled by default)
+			expectedMetricCount: 1, // hw.temperature only (limit disabled by default)
 			setupCompleteDir:    true,
 		},
 		{
@@ -157,7 +152,7 @@ func TestHwTemperatureScraperScrape_Linux(t *testing.T) {
 				},
 			},
 			metricsConfig:       allEnabledMetrics,
-			expectedMetricCount: 3, // hw.temperature, hw.temperature.limit, hw.status
+			expectedMetricCount: 2, // hw.temperature, hw.temperature.limit
 			setupCompleteDir:    true,
 		},
 		{
@@ -181,19 +176,7 @@ func TestHwTemperatureScraperScrape_Linux(t *testing.T) {
 				},
 			},
 			metricsConfig:       disabledLimitMetric,
-			expectedMetricCount: 1, // hw.temperature only (limit and status disabled by default)
-			setupCompleteDir:    true,
-		},
-		{
-			name: "Status metric disabled",
-			config: &TemperatureConfig{
-				Include: MatchConfig{
-					Config:  filterset.Config{MatchType: filterset.Regexp},
-					Sensors: []string{".*"},
-				},
-			},
-			metricsConfig:       disabledStatusMetric,
-			expectedMetricCount: 1, // hw.temperature only
+			expectedMetricCount: 1, // hw.temperature only (limit disabled)
 			setupCompleteDir:    true,
 		},
 		{
@@ -267,104 +250,6 @@ func TestReadTemperatureCelsius(t *testing.T) {
 	require.NoError(t, err)
 	_, err = scraper.readTemperatureCelsius(tempFile)
 	assert.Error(t, err)
-}
-
-func TestDetermineTemperatureState(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Test is for Linux platform")
-	}
-
-	scraper := &hwTemperatureScraper{
-		logger: zap.NewNop(),
-	}
-
-	type testCase struct {
-		name        string
-		temperature float64
-		limits      temperatureLimits
-		expected    metadata.AttributeState
-	}
-
-	critTemp := 85.0
-	maxTemp := 75.0
-	minTemp := 5.0
-	lowCritTemp := 0.0
-
-	testCases := []testCase{
-		{
-			name:        "Normal temperature",
-			temperature: 50.0,
-			limits:      temperatureLimits{},
-			expected:    metadata.AttributeStateOk,
-		},
-		{
-			name:        "Critical high temperature with limit",
-			temperature: 90.0,
-			limits:      temperatureLimits{critTemp: &critTemp},
-			expected:    metadata.AttributeStatePredictedFailure, // 90 >= 85 critTemp
-		},
-		{
-			name:        "Degraded high temperature with limit",
-			temperature: 76.0,
-			limits:      temperatureLimits{maxTemp: &maxTemp},
-			expected:    metadata.AttributeStateDegraded, // 76 >= 75 maxTemp
-		},
-		{
-			name:        "Critical low temperature with limit",
-			temperature: -5.0,
-			limits:      temperatureLimits{lowCritTemp: &lowCritTemp},
-			expected:    metadata.AttributeStatePredictedFailure, // -5 <= 0 lowCritTemp
-		},
-		{
-			name:        "Degraded low temperature with limit",
-			temperature: 4.0,
-			limits:      temperatureLimits{minTemp: &minTemp},
-			expected:    metadata.AttributeStateDegraded, // 4 <= 5 minTemp
-		},
-		{
-			name:        "Needs cleaning (high temp over 75)",
-			temperature: 76.0,
-			limits:      temperatureLimits{},
-			expected:    metadata.AttributeStateNeedsCleaning, // 76 > 75.0
-		},
-		{
-			name:        "Predicted failure (high temp over 85)",
-			temperature: 86.0,
-			limits:      temperatureLimits{},
-			expected:    metadata.AttributeStatePredictedFailure, // 86 > 85.0
-		},
-		{
-			name:        "Degraded high temperature with default threshold",
-			temperature: 81.0,
-			limits:      temperatureLimits{},
-			expected:    metadata.AttributeStateDegraded, // 81 >= 80.0 default
-		},
-		{
-			name:        "Degraded low temperature with default threshold",
-			temperature: 4.0,
-			limits:      temperatureLimits{},
-			expected:    metadata.AttributeStateDegraded, // 4 <= 5.0 default
-		},
-		{
-			name:        "Predicted failure low temperature with default threshold",
-			temperature: -1.0,
-			limits:      temperatureLimits{},
-			expected:    metadata.AttributeStatePredictedFailure, // -1 < 0.0 default
-		},
-		{
-			name:        "Unreasonable temperature",
-			temperature: 250.0,
-			limits:      temperatureLimits{},
-			expected:    metadata.AttributeStateFailed, // 250 > 200 maxReasonableTemp
-		},
-	}
-
-	for _, test := range testCases {
-		t.Run(test.name, func(t *testing.T) {
-			state := scraper.determineTemperatureState(test.temperature, test.limits)
-			assert.Equal(t, test.expected, state)
-		})
-	}
 }
 
 // createTestHwmonDir creates a basic hwmon directory structure

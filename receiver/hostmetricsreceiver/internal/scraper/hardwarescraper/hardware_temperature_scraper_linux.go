@@ -103,18 +103,6 @@ func (s *hwTemperatureScraper) scrape(_ context.Context, mb *metadata.MetricsBui
 		}
 	}
 
-	if s.metricsBuilderConfig.Metrics.HwStatus.Enabled {
-		for _, sensor := range s.sensors {
-			tempCelsius, err := s.readTemperatureCelsius(sensor.tempFile)
-			if err != nil {
-				errors.AddPartial(hwTemperatureMetricsLen, fmt.Errorf("failed to read temperature for %s: %w", sensor.label, err))
-				continue
-			}
-			limits := s.readTemperatureLimits(sensor)
-			s.recordStatusDataPoints(now, sensor, tempCelsius, limits, mb)
-		}
-	}
-
 	return errors.Combine()
 }
 
@@ -256,108 +244,6 @@ func (*hwTemperatureScraper) recordTemperatureLimits(now pcommon.Timestamp, sens
 			)
 		}
 	}
-}
-
-func (s *hwTemperatureScraper) recordStatusDataPoints(now pcommon.Timestamp, sensor sensorInfo, tempCelsius float64, limits temperatureLimits, mb *metadata.MetricsBuilder) {
-	currentState := s.determineTemperatureState(tempCelsius, limits)
-
-	allStates := []metadata.AttributeState{
-		metadata.AttributeStateOk,
-		metadata.AttributeStateDegraded,
-		metadata.AttributeStateFailed,
-		metadata.AttributeStateNeedsCleaning,
-		metadata.AttributeStatePredictedFailure,
-	}
-
-	for _, state := range allStates {
-		value := int64(0)
-		if state == currentState {
-			value = int64(1)
-		}
-
-		mb.RecordHwStatusDataPoint(
-			now,
-			value,
-			sensor.id,
-			sensor.label,
-			sensor.deviceName,
-			state,
-			metadata.AttributeTypeTemperature,
-		)
-	}
-}
-
-func (s *hwTemperatureScraper) determineTemperatureState(currentTemp float64, limits temperatureLimits) metadata.AttributeState {
-	if currentTemp < minReasonableTemp || currentTemp > maxReasonableTemp {
-		return metadata.AttributeStateFailed
-	}
-
-	if s.predictFailure(currentTemp, limits) {
-		return metadata.AttributeStatePredictedFailure
-	}
-
-	if s.isDegraded(currentTemp, limits) {
-		return metadata.AttributeStateDegraded
-	}
-
-	if s.needsCleaning(currentTemp, limits) {
-		return metadata.AttributeStateNeedsCleaning
-	}
-
-	return metadata.AttributeStateOk
-}
-
-func (*hwTemperatureScraper) predictFailure(currentTemp float64, limits temperatureLimits) bool {
-	if limits.critTemp != nil && currentTemp >= *limits.critTemp {
-		return true
-	}
-	if limits.lowCritTemp != nil && currentTemp <= *limits.lowCritTemp {
-		return true
-	}
-
-	// Use default thresholds when sensor limits are not available
-	if currentTemp > 85.0 {
-		return true
-	}
-	if currentTemp < 0.0 {
-		return true
-	}
-
-	return false
-}
-
-func (*hwTemperatureScraper) isDegraded(currentTemp float64, limits temperatureLimits) bool {
-	if limits.maxTemp != nil && currentTemp >= *limits.maxTemp {
-		return true
-	}
-	if limits.minTemp != nil && currentTemp <= *limits.minTemp {
-		return true
-	}
-
-	// Use default thresholds when sensor limits are not available
-	if currentTemp >= 80.0 {
-		return true
-	}
-	if currentTemp <= 5.0 {
-		return true
-	}
-
-	return false
-}
-
-func (*hwTemperatureScraper) needsCleaning(currentTemp float64, limits temperatureLimits) bool {
-	if limits.maxTemp != nil {
-		cleaningThreshold := *limits.maxTemp * 0.8
-		if currentTemp >= cleaningThreshold {
-			return true
-		}
-	}
-
-	if currentTemp > 75.0 {
-		return true
-	}
-
-	return false
 }
 
 func (*hwTemperatureScraper) getDeviceName(hwmonDir string) string {

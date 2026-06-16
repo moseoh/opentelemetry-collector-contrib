@@ -54,126 +54,7 @@ var MapAttributeLimitType = map[string]AttributeLimitType{
 	"low.degraded":  AttributeLimitTypeLowDegraded,
 }
 
-// AttributeState specifies the value state attribute.
-type AttributeState int
-
-const (
-	_ AttributeState = iota
-	AttributeStateDegraded
-	AttributeStateFailed
-	AttributeStateNeedsCleaning
-	AttributeStateOk
-	AttributeStatePredictedFailure
-)
-
-// String returns the string representation of the AttributeState.
-func (av AttributeState) String() string {
-	switch av {
-	case AttributeStateDegraded:
-		return "degraded"
-	case AttributeStateFailed:
-		return "failed"
-	case AttributeStateNeedsCleaning:
-		return "needs_cleaning"
-	case AttributeStateOk:
-		return "ok"
-	case AttributeStatePredictedFailure:
-		return "predicted_failure"
-	}
-	return ""
-}
-
-// MapAttributeState is a helper map of string to AttributeState attribute value.
-var MapAttributeState = map[string]AttributeState{
-	"degraded":          AttributeStateDegraded,
-	"failed":            AttributeStateFailed,
-	"needs_cleaning":    AttributeStateNeedsCleaning,
-	"ok":                AttributeStateOk,
-	"predicted_failure": AttributeStatePredictedFailure,
-}
-
-// AttributeType specifies the value type attribute.
-type AttributeType int
-
-const (
-	_ AttributeType = iota
-	AttributeTypeBattery
-	AttributeTypeCPU
-	AttributeTypeDiskController
-	AttributeTypeEnclosure
-	AttributeTypeFan
-	AttributeTypeGpu
-	AttributeTypeLogicalDisk
-	AttributeTypeMemory
-	AttributeTypeNetwork
-	AttributeTypePhysicalDisk
-	AttributeTypePowerSupply
-	AttributeTypeTapeDrive
-	AttributeTypeTemperature
-	AttributeTypeVoltage
-	AttributeTypeUnknown
-)
-
-// String returns the string representation of the AttributeType.
-func (av AttributeType) String() string {
-	switch av {
-	case AttributeTypeBattery:
-		return "battery"
-	case AttributeTypeCPU:
-		return "cpu"
-	case AttributeTypeDiskController:
-		return "disk_controller"
-	case AttributeTypeEnclosure:
-		return "enclosure"
-	case AttributeTypeFan:
-		return "fan"
-	case AttributeTypeGpu:
-		return "gpu"
-	case AttributeTypeLogicalDisk:
-		return "logical_disk"
-	case AttributeTypeMemory:
-		return "memory"
-	case AttributeTypeNetwork:
-		return "network"
-	case AttributeTypePhysicalDisk:
-		return "physical_disk"
-	case AttributeTypePowerSupply:
-		return "power_supply"
-	case AttributeTypeTapeDrive:
-		return "tape_drive"
-	case AttributeTypeTemperature:
-		return "temperature"
-	case AttributeTypeVoltage:
-		return "voltage"
-	case AttributeTypeUnknown:
-		return "unknown"
-	}
-	return ""
-}
-
-// MapAttributeType is a helper map of string to AttributeType attribute value.
-var MapAttributeType = map[string]AttributeType{
-	"battery":         AttributeTypeBattery,
-	"cpu":             AttributeTypeCPU,
-	"disk_controller": AttributeTypeDiskController,
-	"enclosure":       AttributeTypeEnclosure,
-	"fan":             AttributeTypeFan,
-	"gpu":             AttributeTypeGpu,
-	"logical_disk":    AttributeTypeLogicalDisk,
-	"memory":          AttributeTypeMemory,
-	"network":         AttributeTypeNetwork,
-	"physical_disk":   AttributeTypePhysicalDisk,
-	"power_supply":    AttributeTypePowerSupply,
-	"tape_drive":      AttributeTypeTapeDrive,
-	"temperature":     AttributeTypeTemperature,
-	"voltage":         AttributeTypeVoltage,
-	"unknown":         AttributeTypeUnknown,
-}
-
 var MetricsInfo = metricsInfo{
-	HwStatus: metricInfo{
-		Name: "hw.status",
-	},
 	HwTemperature: metricInfo{
 		Name: "hw.temperature",
 	},
@@ -183,116 +64,12 @@ var MetricsInfo = metricsInfo{
 }
 
 type metricsInfo struct {
-	HwStatus           metricInfo
 	HwTemperature      metricInfo
 	HwTemperatureLimit metricInfo
 }
 
 type metricInfo struct {
 	Name string
-}
-
-type metricHwStatus struct {
-	data          pmetric.Metric       // data buffer for generated metric.
-	config        HwStatusMetricConfig // metric config provided by user.
-	capacity      int                  // max observed number of data points added to the metric.
-	aggDataPoints []int64              // slice containing number of aggregated datapoints at each index
-}
-
-// init fills hw.status metric with initial data.
-func (m *metricHwStatus) init() {
-	m.data.SetName("hw.status")
-	m.data.SetDescription("Operational status: 1 (true) or 0 (false) for each of the possible states.")
-	m.data.SetUnit("1")
-	m.data.SetEmptySum()
-	m.data.Sum().SetIsMonotonic(false)
-	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
-	m.data.Sum().DataPoints().EnsureCapacity(m.capacity)
-	m.aggDataPoints = m.aggDataPoints[:0]
-}
-
-func (m *metricHwStatus) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64, idAttributeValue string, nameAttributeValue string, parentAttributeValue string, stateAttributeValue string, typeAttributeValue string) {
-	if !m.config.Enabled {
-		return
-	}
-
-	dp := pmetric.NewNumberDataPoint()
-	dp.SetStartTimestamp(start)
-	dp.SetTimestamp(ts)
-	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyID) {
-		dp.Attributes().PutStr("id", idAttributeValue)
-	}
-	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyName) {
-		dp.Attributes().PutStr("name", nameAttributeValue)
-	}
-	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyParent) {
-		dp.Attributes().PutStr("parent", parentAttributeValue)
-	}
-	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyState) {
-		dp.Attributes().PutStr("state", stateAttributeValue)
-	}
-	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyType) {
-		dp.Attributes().PutStr("type", typeAttributeValue)
-	}
-
-	var s string
-	dps := m.data.Sum().DataPoints()
-	for i := 0; i < dps.Len(); i++ {
-		dpi := dps.At(i)
-		if dp.Attributes().Equal(dpi.Attributes()) && dp.StartTimestamp() == dpi.StartTimestamp() && dp.Timestamp() == dpi.Timestamp() {
-			switch s = m.config.AggregationStrategy; s {
-			case AggregationStrategySum, AggregationStrategyAvg:
-				dpi.SetIntValue(dpi.IntValue() + val)
-				m.aggDataPoints[i] += 1
-				return
-			case AggregationStrategyMin:
-				if dpi.IntValue() > val {
-					dpi.SetIntValue(val)
-				}
-				return
-			case AggregationStrategyMax:
-				if dpi.IntValue() < val {
-					dpi.SetIntValue(val)
-				}
-				return
-			}
-		}
-	}
-
-	dp.SetIntValue(val)
-	m.aggDataPoints = append(m.aggDataPoints, 1)
-	dp.MoveTo(dps.AppendEmpty())
-}
-
-// updateCapacity saves max length of data point slices that will be used for the slice capacity.
-func (m *metricHwStatus) updateCapacity() {
-	if m.data.Sum().DataPoints().Len() > m.capacity {
-		m.capacity = m.data.Sum().DataPoints().Len()
-	}
-}
-
-// emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
-func (m *metricHwStatus) emit(metrics pmetric.MetricSlice) {
-	if m.config.Enabled && m.data.Sum().DataPoints().Len() > 0 {
-		if m.config.AggregationStrategy == AggregationStrategyAvg {
-			for i, aggCount := range m.aggDataPoints {
-				m.data.Sum().DataPoints().At(i).SetIntValue(m.data.Sum().DataPoints().At(i).IntValue() / aggCount)
-			}
-		}
-		m.updateCapacity()
-		m.data.MoveTo(metrics.AppendEmpty())
-		m.init()
-	}
-}
-
-func newMetricHwStatus(cfg HwStatusMetricConfig) metricHwStatus {
-	m := metricHwStatus{config: cfg}
-
-	if cfg.Enabled {
-		m.data = pmetric.NewMetric()
-		m.init()
-	}
-	return m
 }
 
 type metricHwTemperature struct {
@@ -502,7 +279,6 @@ type MetricsBuilder struct {
 	metricsCapacity          int                  // maximum observed number of metrics per resource.
 	metricsBuffer            pmetric.Metrics      // accumulates metrics data before emitting.
 	buildInfo                component.BuildInfo  // contains version information.
-	metricHwStatus           metricHwStatus
 	metricHwTemperature      metricHwTemperature
 	metricHwTemperatureLimit metricHwTemperatureLimit
 }
@@ -530,7 +306,6 @@ func NewMetricsBuilder(mbc MetricsBuilderConfig, settings scraper.Settings, opti
 		startTime:                pcommon.NewTimestampFromTime(time.Now()),
 		metricsBuffer:            pmetric.NewMetrics(),
 		buildInfo:                settings.BuildInfo,
-		metricHwStatus:           newMetricHwStatus(mbc.Metrics.HwStatus),
 		metricHwTemperature:      newMetricHwTemperature(mbc.Metrics.HwTemperature),
 		metricHwTemperatureLimit: newMetricHwTemperatureLimit(mbc.Metrics.HwTemperatureLimit),
 	}
@@ -599,7 +374,6 @@ func (mb *MetricsBuilder) EmitForResource(options ...ResourceMetricsOption) {
 	ils.Scope().SetName(ScopeName)
 	ils.Scope().SetVersion(mb.buildInfo.Version)
 	ils.Metrics().EnsureCapacity(mb.metricsCapacity)
-	mb.metricHwStatus.emit(ils.Metrics())
 	mb.metricHwTemperature.emit(ils.Metrics())
 	mb.metricHwTemperatureLimit.emit(ils.Metrics())
 
@@ -621,11 +395,6 @@ func (mb *MetricsBuilder) Emit(options ...ResourceMetricsOption) pmetric.Metrics
 	metrics := mb.metricsBuffer
 	mb.metricsBuffer = pmetric.NewMetrics()
 	return metrics
-}
-
-// RecordHwStatusDataPoint adds a data point to hw.status metric.
-func (mb *MetricsBuilder) RecordHwStatusDataPoint(ts pcommon.Timestamp, val int64, idAttributeValue string, nameAttributeValue string, parentAttributeValue string, stateAttributeValue AttributeState, typeAttributeValue AttributeType) {
-	mb.metricHwStatus.recordDataPoint(mb.startTime, ts, val, idAttributeValue, nameAttributeValue, parentAttributeValue, stateAttributeValue.String(), typeAttributeValue.String())
 }
 
 // RecordHwTemperatureDataPoint adds a data point to hw.temperature metric.

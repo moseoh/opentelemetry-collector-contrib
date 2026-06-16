@@ -164,7 +164,6 @@ The hardwarescraper currently supports the following sub-scrapers:
 - **Temperature** (Linux only): Collects temperature readings from hardware sensors
   - `hw.temperature`: Current temperature readings in Celsius
   - `hw.temperature.limit`: Temperature thresholds (max, critical, min, low_critical)
-  - `hw.status`: Hardware status based on temperature thresholds (ok, degraded, failed, needs_cleaning, predicted_failure)
 
 **Note**: Hardware scraping is currently only supported on Linux systems that expose hardware sensors through the sysfs hwmon interface. Only temperature monitoring is implemented at this time.
 

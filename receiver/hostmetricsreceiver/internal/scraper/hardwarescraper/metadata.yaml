@@ -33,28 +33,7 @@ attributes:
     description: Location of the sensor.
     type: string
 
-  state:
-    description: The current state of the component.
-    type: string
-    enum: [degraded, failed, needs_cleaning, ok, predicted_failure]
-
-  type:
-    description: Type of the component.
-    type: string
-    enum: [battery, cpu, disk_controller, enclosure, fan, gpu, logical_disk, memory, network, physical_disk, power_supply, tape_drive, temperature, voltage, unknown]
-
 metrics:
-  hw.status:
-    enabled: false
-    description: "Operational status: 1 (true) or 0 (false) for each of the possible states."
-    unit: "1"
-    stability: development
-    sum:
-      value_type: int
-      aggregation_temporality: cumulative
-      monotonic: false
-    attributes: [id, name, parent, state, type]
-
   hw.temperature:
     enabled: true
     description: Temperature in degrees Celsius.

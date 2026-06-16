@@ -39,24 +39,6 @@ metrics:
     enabled: true
 ```
 
-### hw.status
-
-Operational status: 1 (true) or 0 (false) for each of the possible states.
-
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| 1 | Sum | Int | Cumulative | false | Development |
-
-#### Attributes
-
-| Name | Description | Values | Requirement Level | Semantic Convention |
-| ---- | ----------- | ------ | ----------------- | ------------------- |
-| id | An identifier for the hardware component, unique within the monitored host. | Any Str | Recommended | - |
-| name | An easily-recognizable name for the hardware component. | Any Str | Recommended | - |
-| parent | Unique identifier of the parent component (typically the id attribute of the enclosure, or disk controller). | Any Str | Recommended | - |
-| state | The current state of the component. | Str: ``degraded``, ``failed``, ``needs_cleaning``, ``ok``, ``predicted_failure`` | Recommended | - |
-| type | Type of the component. | Str: ``battery``, ``cpu``, ``disk_controller``, ``enclosure``, ``fan``, ``gpu``, ``logical_disk``, ``memory``, ``network``, ``physical_disk``, ``power_supply``, ``tape_drive``, ``temperature``, ``voltage``, ``unknown`` | Recommended | - |
-
 ### hw.temperature.limit
 
 Temperature limit in degrees Celsius.

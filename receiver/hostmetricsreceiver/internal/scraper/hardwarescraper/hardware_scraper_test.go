@@ -158,12 +158,10 @@ func validateMetrics(t *testing.T, metrics pmetric.Metrics, expectedCount int) {
 	// Validate temperature metrics
 	for i := 0; i < hwMetrics.Len(); i++ {
 		metric := hwMetrics.At(i)
-		assert.Contains(t, []string{"hw.temperature", "hw.temperature.limit", "hw.status"}, metric.Name())
+		assert.Contains(t, []string{"hw.temperature", "hw.temperature.limit"}, metric.Name())
 		switch metric.Name() {
 		case "hw.temperature", "hw.temperature.limit":
 			assert.Positive(t, metric.Gauge().DataPoints().Len())
-		case "hw.status":
-			assert.Positive(t, metric.Sum().DataPoints().Len())
 		}
 	}
 }
