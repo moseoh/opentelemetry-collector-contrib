@@ -25,6 +25,7 @@ func TestReadConfig(t *testing.T) {
 	require.Equal(t, dir, cfg.DirPath)
 	require.Equal(t, dir, cfg.OutputFolder)
 	require.Empty(t, cfg.ConfigType)
+	require.Equal(t, ".", cfg.Pattern)
 }
 
 func TestReadConfig_Errors(t *testing.T) {
@@ -59,6 +60,7 @@ func TestReadConfig_RespectsRootTypeFlag(t *testing.T) {
 func TestReadConfig_ReadsSettingsFile(t *testing.T) {
 	projectDir := t.TempDir()
 	settings := Settings{
+		Namespace: "github.com/open-telemetry/opentelemetry-collector-contrib",
 		Mappings: Mappings{
 			"pkg": PackagesMapping{
 				"Thing": {
@@ -83,6 +85,7 @@ func TestReadConfig_ReadsSettingsFile(t *testing.T) {
 
 	expectedOutput := filepath.Join(projectDir, "workdir")
 	require.Equal(t, evalPath(t, expectedOutput), evalPath(t, cfg.OutputFolder))
+	require.Equal(t, "github.com/open-telemetry/opentelemetry-collector-contrib", cfg.Namespace)
 	require.Equal(t, Mappings{
 		"pkg": PackagesMapping{
 			"Thing": {SchemaType: SchemaTypeString, Format: "uuid"},
@@ -213,6 +216,7 @@ func readConfigForTest(t *testing.T, args ...string) (*Config, error) {
 	origRootType := configType
 	origOutputFolder := outputFolder
 	origFileType := fileType
+	origPattern := pattern
 
 	flag.CommandLine = flag.NewFlagSet(origArgs[0], flag.ContinueOnError)
 	flag.CommandLine.SetOutput(io.Discard)
@@ -220,6 +224,7 @@ func readConfigForTest(t *testing.T, args ...string) (*Config, error) {
 	configType = flag.String("r", "", "Root type name (default is derived from file name)")
 	outputFolder = flag.String("o", "", "Output schema folder")
 	fileType = flag.String("t", "yaml", "Output file type (yaml or json)")
+	pattern = flag.String("p", ".", "Optional pattern to match config struct package")
 
 	os.Args = append([]string{origArgs[0]}, args...)
 	t.Cleanup(func() {
@@ -228,6 +233,7 @@ func readConfigForTest(t *testing.T, args ...string) (*Config, error) {
 		configType = origRootType
 		outputFolder = origOutputFolder
 		fileType = origFileType
+		pattern = origPattern
 	})
 
 	return ReadConfig()

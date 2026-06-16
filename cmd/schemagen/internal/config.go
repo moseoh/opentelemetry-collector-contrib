@@ -19,22 +19,29 @@ const (
 	Package   RunMode = "package"
 )
 
-type Config = struct {
-	Mode          RunMode
-	DirPath       string
-	OutputFolder  string
-	ConfigPackage string
-	ConfigType    string
-	FileType      string
-	Class         string
-	Mappings      Mappings
-	AllowedRefs   []string
+type Config struct {
+	Mode              RunMode
+	DirPath           string
+	OutputFolder      string
+	ConfigPackage     string
+	ConfigType        string
+	FileType          string
+	Class             string
+	Mappings          Mappings
+	AllowedRefs       []string
+	Namespace         string
+	ResolveRefs       bool
+	ComponentOverride *ComponentOverride
+	SettingsDir       string
+	Pattern           string
 }
 
 var (
 	configType   = flag.String("c", "Config", "Config type name for component schema generation")
 	outputFolder = flag.String("o", "", "Output schema folder (defaults to input folder)")
 	fileType     = flag.String("t", "yaml", "Output file type (yaml or json)")
+	resolveRefs  = flag.Bool("r", false, "Resolve external $ref entries inline in the output schema")
+	pattern      = flag.String("p", ".", "Optional pattern to match config struct package, e.g. \"go.opentelemetry.io/collector/receiver/otlpreceiver")
 )
 
 func usage() {
@@ -77,6 +84,7 @@ func ReadConfig() (*Config, error) {
 		class         string
 		configPackage string
 		allowedRefs   = make([]string, 0)
+		namespace     string
 	)
 
 	switch {
@@ -109,13 +117,23 @@ func ReadConfig() (*Config, error) {
 		}
 	}
 
-	if s, ok := ReadSettingsFile(); ok {
+	var (
+		componentOverride *ComponentOverride
+		settingsDir       string
+	)
+	if s, sDir, ok := ReadSettingsFile(); ok {
 		mappings = s.Mappings
+		settingsDir = sDir
 		comp := class + "/" + ctype
 		if override, found := s.ComponentOverrides[comp]; found {
-			*configType = override.ConfigName
+			overrideCopy := override
+			componentOverride = &overrideCopy
+			if override.ConfigName != "" {
+				*configType = override.ConfigName
+			}
 		}
 		allowedRefs = s.AllowedRefs
+		namespace = s.Namespace
 	}
 
 	configNameParts := strings.Split(*configType, ".")
@@ -125,14 +143,27 @@ func ReadConfig() (*Config, error) {
 	}
 
 	return &Config{
-		DirPath:       dirPath,
-		OutputFolder:  output,
-		ConfigPackage: configPackage,
-		ConfigType:    *configType,
-		FileType:      *fileType,
-		Mode:          mode,
-		Mappings:      mappings,
-		Class:         class,
-		AllowedRefs:   allowedRefs,
+		DirPath:           dirPath,
+		OutputFolder:      output,
+		ConfigPackage:     configPackage,
+		ConfigType:        *configType,
+		FileType:          *fileType,
+		Mode:              mode,
+		Mappings:          mappings,
+		Class:             class,
+		AllowedRefs:       allowedRefs,
+		Namespace:         namespace,
+		ResolveRefs:       *resolveRefs,
+		ComponentOverride: componentOverride,
+		SettingsDir:       settingsDir,
+		Pattern:           *pattern,
 	}, nil
+}
+
+func (c *Config) Fork(mode RunMode, namespace string) *Config {
+	cfg := *c
+	cfg.Mode = mode
+	cfg.Namespace = namespace
+	cfg.ComponentOverride = nil
+	return &cfg
 }

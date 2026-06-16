@@ -19,7 +19,8 @@ import (
 	conventionsv125 "go.opentelemetry.io/otel/semconv/v1.25.0"
 	conventionsv126 "go.opentelemetry.io/otel/semconv/v1.26.0"
 	conventionsv128 "go.opentelemetry.io/otel/semconv/v1.28.0"
-	conventions "go.opentelemetry.io/otel/semconv/v1.38.0"
+	conventionsv138 "go.opentelemetry.io/otel/semconv/v1.38.0"
+	conventions "go.opentelemetry.io/otel/semconv/v1.40.0"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal/internal/metadata"
 )
@@ -196,7 +197,12 @@ func fillStatus(statusStr PICTInputStatus, spanStatus ptrace.Status) {
 }
 
 func appendDatabaseSQLAttributes(attrMap pcommon.Map) {
-	attrMap.PutStr(string(conventionsv128.DBSystemKey), "mysql")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0DatabaseConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv128.DBSystemKey), "mysql")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1DatabaseConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.DBSystemNameKey), "mysql")
+	}
 	attrMap.PutStr(string(conventionsv125.DBConnectionStringKey), "Server=shopdb.example.com;Database=ShopDb;Uid=billing_user;TableCache=true;UseCompression=True;MinimumPoolSize=10;MaximumPoolSize=50;")
 	attrMap.PutStr(string(conventionsv125.DBUserKey), "billing_user")
 	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0NetworkConventionsFeatureGate.IsEnabled() {
@@ -221,7 +227,12 @@ func appendDatabaseSQLAttributes(attrMap pcommon.Map) {
 }
 
 func appendDatabaseNoSQLAttributes(attrMap pcommon.Map) {
-	attrMap.PutStr(string(conventionsv128.DBSystemKey), "mongodb")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0DatabaseConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv128.DBSystemKey), "mongodb")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1DatabaseConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.DBSystemNameKey), "mongodb")
+	}
 	attrMap.PutStr(string(conventionsv125.DBUserKey), "the_user")
 	attrMap.PutStr(string(conventionsv125.NetPeerNameKey), "mongodb0.example.com")
 	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0NetworkConventionsFeatureGate.IsEnabled() {
@@ -240,7 +251,12 @@ func appendDatabaseNoSQLAttributes(attrMap pcommon.Map) {
 
 func appendFaaSDatasourceAttributes(attrMap pcommon.Map) {
 	attrMap.PutStr(string(conventions.FaaSTriggerKey), conventions.FaaSTriggerDatasource.Value.AsString())
-	attrMap.PutStr(string(conventionsv118.FaaSExecutionKey), "DB85AF51-5E13-473D-8454-1E2D59415EAB")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0FaaSConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv118.FaaSExecutionKey), "DB85AF51-5E13-473D-8454-1E2D59415EAB")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1FaaSConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.FaaSInvocationIDKey), "DB85AF51-5E13-473D-8454-1E2D59415EAB")
+	}
 	attrMap.PutStr(string(conventions.FaaSDocumentCollectionKey), "faa-flight-delay-information-incoming")
 	attrMap.PutStr(string(conventions.FaaSDocumentOperationKey), "insert")
 	attrMap.PutStr(string(conventions.FaaSDocumentTimeKey), "2020-05-09T19:50:06Z")
@@ -263,8 +279,14 @@ func appendFaaSHTTPAttributes(includeStatus bool, attrMap pcommon.Map) {
 	if includeStatus {
 		attrMap.PutInt(string(conventionsv125.HTTPStatusCodeKey), 201)
 	}
-	attrMap.PutStr(string(conventionsv118.HTTPUserAgentKey),
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1 Safari/605.1.15")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv118.HTTPUserAgentKey),
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1 Safari/605.1.15")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.UserAgentOriginalKey),
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1 Safari/605.1.15")
+	}
 	attrMap.PutStr(string(conventionsv126.EnduserIDKey), "unittest")
 }
 
@@ -278,7 +300,12 @@ func appendFaaSPubSubAttributes(attrMap pcommon.Map) {
 
 func appendFaaSTimerAttributes(attrMap pcommon.Map) {
 	attrMap.PutStr(string(conventions.FaaSTriggerKey), conventions.FaaSTriggerTimer.Value.AsString())
-	attrMap.PutStr(string(conventionsv118.FaaSExecutionKey), "73103A4C-E22F-4493-BDE8-EAE5CAB37B50")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0FaaSConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv118.FaaSExecutionKey), "73103A4C-E22F-4493-BDE8-EAE5CAB37B50")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1FaaSConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.FaaSInvocationIDKey), "73103A4C-E22F-4493-BDE8-EAE5CAB37B50")
+	}
 	attrMap.PutStr(string(conventions.FaaSTimeKey), "2020-05-09T20:00:08Z")
 	attrMap.PutStr(string(conventions.FaaSCronKey), "0/15 * * * *")
 	attrMap.PutStr(string(conventionsv126.EnduserIDKey), "unittest")
@@ -317,10 +344,21 @@ func appendHTTPServerAttributes(includeStatus bool, attrMap pcommon.Map) {
 	if includeStatus {
 		attrMap.PutInt(string(conventionsv125.HTTPStatusCodeKey), 201)
 	}
-	attrMap.PutStr(string(conventionsv118.HTTPUserAgentKey),
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv118.HTTPUserAgentKey),
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.UserAgentOriginalKey),
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
+	}
 	attrMap.PutStr(string(conventions.HTTPRouteKey), "/blog/posts")
-	attrMap.PutStr(string(conventionsv120.HTTPClientIPKey), "2001:506:71f0:16e::1")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv120.HTTPClientIPKey), "2001:506:71f0:16e::1")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.ClientAddressKey), "2001:506:71f0:16e::1")
+	}
 	attrMap.PutStr(string(conventionsv126.EnduserIDKey), "unittest")
 }
 
@@ -353,7 +391,12 @@ func appendMessagingConsumerAttributes(attrMap pcommon.Map) {
 }
 
 func appendGRPCClientAttributes(attrMap pcommon.Map) {
-	attrMap.PutStr(string(conventions.RPCServiceKey), "PullRequestsService")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0RPCConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv138.RPCServiceKey), "PullRequestsService")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1RPCConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.RPCMethodKey), "PullRequestsService/PullRequestByID")
+	}
 	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0NetworkConventionsFeatureGate.IsEnabled() {
 		attrMap.PutStr("net.peer.ip", "2600:1700:1f00:11c0:4de0:c223:a800:4e87")
 	}
@@ -365,7 +408,12 @@ func appendGRPCClientAttributes(attrMap pcommon.Map) {
 }
 
 func appendGRPCServerAttributes(attrMap pcommon.Map) {
-	attrMap.PutStr(string(conventions.RPCServiceKey), "PullRequestsService")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0RPCConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv138.RPCServiceKey), "PullRequestsService")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1RPCConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.RPCMethodKey), "PullRequestsService/PullRequestByID")
+	}
 	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0NetworkConventionsFeatureGate.IsEnabled() {
 		attrMap.PutStr("net.peer.ip", "192.168.1.70")
 	}
@@ -403,11 +451,27 @@ func appendMaxCountAttributes(includeStatus bool, attrMap pcommon.Map) {
 		attrMap.PutInt(string(conventionsv125.HTTPStatusCodeKey), 201)
 		attrMap.PutStr("http.status_text", "Created")
 	}
-	attrMap.PutStr(string(conventionsv118.HTTPUserAgentKey),
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv118.HTTPUserAgentKey),
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.UserAgentOriginalKey),
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
+	}
 	attrMap.PutStr(string(conventions.HTTPRouteKey), "/blog/posts")
-	attrMap.PutStr(string(conventionsv120.HTTPClientIPKey), "2600:1700:1f00:11c0:1ced:afa5:fd77:9d01")
-	attrMap.PutStr(string(conventions.PeerServiceKey), "IdentifyImageService")
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv120.HTTPClientIPKey), "2600:1700:1f00:11c0:1ced:afa5:fd77:9d01")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1HTTPConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.ClientAddressKey), "2600:1700:1f00:11c0:1ced:afa5:fd77:9d01")
+	}
+	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0RPCConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventionsv138.PeerServiceKey), "IdentifyImageService")
+	}
+	if metadata.InternalCoreinternalGoldendatasetEmitV1RPCConventionsFeatureGate.IsEnabled() {
+		attrMap.PutStr(string(conventions.ServicePeerNameKey), "IdentifyImageService")
+	}
 	if !metadata.InternalCoreinternalGoldendatasetDontEmitV0NetworkConventionsFeatureGate.IsEnabled() {
 		attrMap.PutStr("net.peer.ip", "2600:1700:1f00:11c0:1ced:afa5:fd77:9ddc")
 	}

@@ -24,8 +24,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/gcp"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/heroku"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/hetzner"
+	ibmcloudclassic "github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/ibmcloud/classic"
 	ibmcloudvpc "github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/ibmcloud/vpc"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/k8snode"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/k8sapi"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/kubeadm"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/openshift"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/openstack/nova"
@@ -99,6 +100,9 @@ type DetectorConfig struct {
 	// HetznerConfig contains user-specified configurations for the hetzner detector
 	HetznerConfig hetzner.Config `mapstructure:"hetzner"`
 
+	// IBMCloudClassicConfig contains user-specified configurations for the IBM Cloud Classic detector
+	IBMCloudClassicConfig ibmcloudclassic.Config `mapstructure:"ibmcloud_classic"`
+
 	// IBMCloudVPCConfig contains user-specified configurations for the IBM Cloud VPC detector
 	IBMCloudVPCConfig ibmcloudvpc.Config `mapstructure:"ibmcloud_vpc"`
 
@@ -114,8 +118,11 @@ type DetectorConfig struct {
 	// OracleCloud contains user-specified configurations for the OracleCloud detector
 	OracleCloudConfig oraclecloud.Config `mapstructure:"oraclecloud"`
 
-	// K8SNode contains user-specified configurations for the K8SNode detector
-	K8SNodeConfig k8snode.Config `mapstructure:"k8snode"`
+	// K8SAPIConfig contains user-specified configurations for the K8S API detector
+	K8SAPIConfig k8sapi.Config `mapstructure:"k8s_api"`
+
+	// K8SNodeConfig contains user-specified configurations for the K8SNode detector (deprecated: use K8SAPIConfig)
+	K8SNodeConfig k8sapi.Config `mapstructure:"k8snode"`
 
 	// Kubeadm contains user-specified configurations for the Kubeadm detector
 	KubeadmConfig kubeadm.Config `mapstructure:"kubeadm"`
@@ -152,12 +159,14 @@ func detectorCreateDefaultConfig() DetectorConfig {
 		GcpConfig:              gcp.CreateDefaultConfig(),
 		HerokuConfig:           heroku.CreateDefaultConfig(),
 		HetznerConfig:          hetzner.CreateDefaultConfig(),
+		IBMCloudClassicConfig:  ibmcloudclassic.CreateDefaultConfig(),
 		IBMCloudVPCConfig:      ibmcloudvpc.CreateDefaultConfig(),
 		SystemConfig:           system.CreateDefaultConfig(),
 		OpenShiftConfig:        openshift.CreateDefaultConfig(),
 		OpenStackNovaConfig:    nova.CreateDefaultConfig(),
 		OracleCloudConfig:      oraclecloud.CreateDefaultConfig(),
-		K8SNodeConfig:          k8snode.CreateDefaultConfig(),
+		K8SAPIConfig:           k8sapi.CreateDefaultConfig(),
+		K8SNodeConfig:          k8sapi.CreateDefaultConfig(),
 		KubeadmConfig:          kubeadm.CreateDefaultConfig(),
 		AkamaiConfig:           akamai.CreateDefaultConfig(),
 		ScalewayConfig:         scaleway.CreateDefaultConfig(),
@@ -197,6 +206,8 @@ func (d *DetectorConfig) GetConfigFromType(detectorType internal.DetectorType) i
 		return d.HerokuConfig
 	case hetzner.TypeStr:
 		return d.HetznerConfig
+	case ibmcloudclassic.TypeStr:
+		return d.IBMCloudClassicConfig
 	case ibmcloudvpc.TypeStr:
 		return d.IBMCloudVPCConfig
 	case system.TypeStr:
@@ -207,7 +218,9 @@ func (d *DetectorConfig) GetConfigFromType(detectorType internal.DetectorType) i
 		return d.OpenStackNovaConfig
 	case oraclecloud.TypeStr:
 		return d.OracleCloudConfig
-	case k8snode.TypeStr:
+	case k8sapi.TypeStr:
+		return d.K8SAPIConfig
+	case k8sapi.TypeStrAlias:
 		return d.K8SNodeConfig
 	case kubeadm.TypeStr:
 		return d.KubeadmConfig

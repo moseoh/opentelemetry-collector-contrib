@@ -41,6 +41,10 @@ func NewParser(cfg *Config) *Parser {
 }
 
 func (p *Parser) Parse() (*Schema, error) {
+	return p.ParsePattern(p.config.Pattern)
+}
+
+func (p *Parser) ParsePattern(pattern string) (*Schema, error) {
 	set := token.NewFileSet()
 	pkgs, e := packages.Load(&packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
@@ -48,7 +52,7 @@ func (p *Parser) Parse() (*Schema, error) {
 		Fset:  set,
 		Dir:   p.config.DirPath,
 		Tests: false,
-	}, ".")
+	}, pattern)
 
 	if e != nil {
 		return nil, e
@@ -65,6 +69,10 @@ func (p *Parser) Parse() (*Schema, error) {
 
 	// process types
 	if err := p.processTypes(); err != nil {
+		return nil, err
+	}
+
+	if err := p.expandFactoryMaps(); err != nil {
 		return nil, err
 	}
 
@@ -194,7 +202,7 @@ func (p *Parser) parseType(typeInfo *TypeInfo) (SchemaElement, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(typeInfo.comms) > 0 {
+	if schemaElement != nil && len(typeInfo.comms) > 0 {
 		if desc, ok := ExtractDescriptionFromComment(typeInfo.comms[0]); ok {
 			schemaElement.setDescription(desc)
 		}
@@ -382,7 +390,14 @@ func (p *Parser) parseSelector(selector *ast.SelectorExpr) (SchemaElement, error
 			fullID := fmt.Sprintf("%s.%s", path, strcase.ToSnake(name))
 			// if allowed - create ref, else create any with custom type
 			if allowed {
-				element := CreateRefField(fullID, "")
+				var refID string
+				// if ref is in the same namespace/repository
+				if path == p.config.Namespace || strings.HasPrefix(path, p.config.Namespace+"/") {
+					refID, _ = strings.CutPrefix(fullID, p.config.Namespace)
+				} else {
+					refID = fullID
+				}
+				element := CreateRefField(refID, "")
 				return element, nil
 			}
 			element := CreateSimpleField(SchemaTypeAny, "")
