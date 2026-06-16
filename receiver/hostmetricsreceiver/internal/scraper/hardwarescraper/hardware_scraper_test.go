@@ -42,7 +42,7 @@ func TestScrape(t *testing.T) {
 		{
 			name: "Standard",
 			config: &Config{
-				MetricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+				MetricsBuilderConfig: metadata.NewDefaultMetricsBuilderConfig(),
 				HwmonPath:            createTestHwmonData(t),
 				Temperature: &TemperatureConfig{
 					Include: MatchConfig{
@@ -57,7 +57,7 @@ func TestScrape(t *testing.T) {
 		{
 			name: "Standard with root path",
 			config: &Config{
-				MetricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+				MetricsBuilderConfig: metadata.NewDefaultMetricsBuilderConfig(),
 				HwmonPath:            defaultHwmonPath,
 				Temperature: &TemperatureConfig{
 					Include: MatchConfig{
@@ -72,7 +72,7 @@ func TestScrape(t *testing.T) {
 		{
 			name: "No hwmon path",
 			config: &Config{
-				MetricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+				MetricsBuilderConfig: metadata.NewDefaultMetricsBuilderConfig(),
 				HwmonPath:            "/nonexistent/path",
 				Temperature: &TemperatureConfig{
 					Include: MatchConfig{
@@ -87,7 +87,7 @@ func TestScrape(t *testing.T) {
 		{
 			name: "No temperature config",
 			config: &Config{
-				MetricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+				MetricsBuilderConfig: metadata.NewDefaultMetricsBuilderConfig(),
 				HwmonPath:            createTestHwmonData(t),
 				Temperature:          nil,
 			},
@@ -122,7 +122,7 @@ func TestScrapeOnNonLinux(t *testing.T) {
 	}
 
 	config := &Config{
-		MetricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+		MetricsBuilderConfig: metadata.NewDefaultMetricsBuilderConfig(),
 		HwmonPath:            "/sys/class/hwmon",
 		Temperature: &TemperatureConfig{
 			Include: MatchConfig{

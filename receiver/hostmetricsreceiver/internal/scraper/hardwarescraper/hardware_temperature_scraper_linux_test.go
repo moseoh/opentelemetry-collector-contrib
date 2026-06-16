@@ -91,7 +91,7 @@ func TestHwTemperatureScraperStart_Linux(t *testing.T) {
 				logger:               zap.NewNop(),
 				config:               test.config,
 				hwmonPath:            test.hwmonPath,
-				metricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+				metricsBuilderConfig: metadata.NewDefaultMetricsBuilderConfig(),
 			}
 
 			err := scraper.start(t.Context())
@@ -119,19 +119,19 @@ func TestHwTemperatureScraperScrape_Linux(t *testing.T) {
 	}
 
 	// Disabled temperature metric
-	disabledTempMetric := metadata.DefaultMetricsBuilderConfig()
+	disabledTempMetric := metadata.NewDefaultMetricsBuilderConfig()
 	disabledTempMetric.Metrics.HwTemperature.Enabled = false
 
 	// Disabled temperature limit metric
-	disabledLimitMetric := metadata.DefaultMetricsBuilderConfig()
+	disabledLimitMetric := metadata.NewDefaultMetricsBuilderConfig()
 	disabledLimitMetric.Metrics.HwTemperatureLimit.Enabled = false
 
 	// Disabled status metric
-	disabledStatusMetric := metadata.DefaultMetricsBuilderConfig()
+	disabledStatusMetric := metadata.NewDefaultMetricsBuilderConfig()
 	disabledStatusMetric.Metrics.HwStatus.Enabled = false
 
 	// All metrics enabled
-	allEnabledMetrics := metadata.DefaultMetricsBuilderConfig()
+	allEnabledMetrics := metadata.NewDefaultMetricsBuilderConfig()
 	allEnabledMetrics.Metrics.HwTemperatureLimit.Enabled = true
 	allEnabledMetrics.Metrics.HwStatus.Enabled = true
 
@@ -144,7 +144,7 @@ func TestHwTemperatureScraperScrape_Linux(t *testing.T) {
 					Sensors: []string{".*"},
 				},
 			},
-			metricsConfig:       metadata.DefaultMetricsBuilderConfig(),
+			metricsConfig:       metadata.NewDefaultMetricsBuilderConfig(),
 			expectedMetricCount: 1, // hw.temperature only (hw.status disabled by default)
 			setupCompleteDir:    true,
 		},
@@ -208,7 +208,7 @@ func TestHwTemperatureScraperScrape_Linux(t *testing.T) {
 					Sensors: []string{"temp1"},
 				},
 			},
-			metricsConfig:       metadata.DefaultMetricsBuilderConfig(),
+			metricsConfig:       metadata.NewDefaultMetricsBuilderConfig(),
 			expectedMetricCount: 0, // No sensors match after exclusion
 			setupCompleteDir:    true,
 		},

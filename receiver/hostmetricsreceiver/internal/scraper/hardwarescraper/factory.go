@@ -21,7 +21,7 @@ func NewFactory() scraper.Factory {
 // createDefaultConfig creates the default configuration for the scraper.
 func createDefaultConfig() component.Config {
 	return &Config{
-		MetricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+		MetricsBuilderConfig: metadata.NewDefaultMetricsBuilderConfig(),
 		HwmonPath:            defaultHwmonPath,
 		Temperature: &TemperatureConfig{
 			Include: MatchConfig{

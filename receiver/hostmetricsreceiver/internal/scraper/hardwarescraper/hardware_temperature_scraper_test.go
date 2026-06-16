@@ -20,7 +20,7 @@ func TestHwTemperatureScraperStart(t *testing.T) {
 		logger:               zap.NewNop(),
 		config:               &TemperatureConfig{},
 		hwmonPath:            "/sys/class/hwmon",
-		metricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+		metricsBuilderConfig: metadata.NewDefaultMetricsBuilderConfig(),
 	}
 
 	err := scraper.start(t.Context())
@@ -33,10 +33,10 @@ func TestHwTemperatureScraperScrape(t *testing.T) {
 		logger:               zap.NewNop(),
 		config:               &TemperatureConfig{},
 		hwmonPath:            "/sys/class/hwmon",
-		metricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+		metricsBuilderConfig: metadata.NewDefaultMetricsBuilderConfig(),
 	}
 
-	mb := metadata.NewMetricsBuilder(metadata.DefaultMetricsBuilderConfig(), scrapertest.NewNopSettings(metadata.Type))
+	mb := metadata.NewMetricsBuilder(metadata.NewDefaultMetricsBuilderConfig(), scrapertest.NewNopSettings(metadata.Type))
 	err := scraper.scrape(t.Context(), mb)
 	assert.Error(t, err)
 	assert.Equal(t, ErrHwmonUnavailable, err)
