@@ -30,7 +30,7 @@ func TestFactoryMaps(t *testing.T) {
 			dir:          "../../../receiver/hostmetricsreceiver",
 			overrideKey:  "receiver/host_metrics",
 			propertyName: "scrapers",
-			expectedKeys: []string{"cpu", "disk", "filesystem", "load", "memory", "network", "nfs", "paging", "process", "processes", "system"},
+			expectedKeys: []string{"cpu", "disk", "filesystem", "hardware", "load", "memory", "network", "nfs", "paging", "process", "processes", "system"},
 		},
 		{
 			name:         "ciscoosreceiver — composite literal, inline MustNewType key",
