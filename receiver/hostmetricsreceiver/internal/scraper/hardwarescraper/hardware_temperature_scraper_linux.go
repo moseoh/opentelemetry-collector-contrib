@@ -30,7 +30,7 @@ const (
 	maxReasonableTemp = 200.0
 )
 
-type hwTemperatureScraper struct {
+type hardwareTemperatureScraper struct {
 	logger               *zap.Logger
 	config               *TemperatureConfig
 	hwmonPath            string
@@ -42,7 +42,7 @@ type hwTemperatureScraper struct {
 	sensors []sensorInfo
 }
 
-func (s *hwTemperatureScraper) start(ctx context.Context) error {
+func (s *hardwareTemperatureScraper) start(ctx context.Context) error {
 	var err error
 
 	if s.hwmonPath == "" || s.hwmonPath == defaultHwmonPath {
@@ -77,7 +77,7 @@ func (s *hwTemperatureScraper) start(ctx context.Context) error {
 	return nil
 }
 
-func (s *hwTemperatureScraper) scrape(_ context.Context, mb *metadata.MetricsBuilder) error {
+func (s *hardwareTemperatureScraper) scrape(_ context.Context, mb *metadata.MetricsBuilder) error {
 	now := pcommon.NewTimestampFromTime(time.Now())
 	var errors scrapererror.ScrapeErrors
 
@@ -89,7 +89,7 @@ func (s *hwTemperatureScraper) scrape(_ context.Context, mb *metadata.MetricsBui
 		for _, sensor := range s.sensors {
 			tempCelsius, err := s.readTemperatureCelsius(sensor.tempFile)
 			if err != nil {
-				errors.AddPartial(hwTemperatureMetricsLen, fmt.Errorf("failed to read temperature for %s: %w", sensor.label, err))
+				errors.AddPartial(hardwareTemperatureMetricsLen, fmt.Errorf("failed to read temperature for %s: %w", sensor.label, err))
 				continue
 			}
 			mb.RecordHwTemperatureDataPoint(now, tempCelsius, sensor.id, sensor.label, sensor.deviceName, sensor.location)
@@ -123,7 +123,7 @@ type sensorInfo struct {
 	tempFile   string
 }
 
-func (s *hwTemperatureScraper) scanTemperatureSensors() ([]sensorInfo, error) {
+func (s *hardwareTemperatureScraper) scanTemperatureSensors() ([]sensorInfo, error) {
 	var sensors []sensorInfo
 
 	hwmonDirs, err := filepath.Glob(filepath.Join(s.hwmonPath, "hwmon*"))
@@ -153,7 +153,7 @@ func (s *hwTemperatureScraper) scanTemperatureSensors() ([]sensorInfo, error) {
 	return sensors, nil
 }
 
-func (*hwTemperatureScraper) readTemperatureCelsius(file string) (float64, error) {
+func (*hardwareTemperatureScraper) readTemperatureCelsius(file string) (float64, error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return 0, err
@@ -167,7 +167,7 @@ func (*hwTemperatureScraper) readTemperatureCelsius(file string) (float64, error
 	return float64(tempMilliCelsius) / 1000.0, nil
 }
 
-func (s *hwTemperatureScraper) buildSensorInfo(tempFile, deviceName string) (sensorInfo, error) {
+func (s *hardwareTemperatureScraper) buildSensorInfo(tempFile, deviceName string) (sensorInfo, error) {
 	baseName := filepath.Base(tempFile)
 	sensorNum := extractSensorNumber(baseName)
 	if sensorNum == "" {
@@ -185,7 +185,7 @@ func (s *hwTemperatureScraper) buildSensorInfo(tempFile, deviceName string) (sen
 		id:         fmt.Sprintf("%s_temp%s", deviceName, sensorNum),
 		label:      sensorLabel,
 		deviceName: deviceName,
-		location:   fmt.Sprintf("%s_TEMP%s", strings.ToUpper(deviceName), sensorNum), // OpenTelemetry standard format
+		location:   fmt.Sprintf("%s_TEMP%s", strings.ToUpper(deviceName), sensorNum),
 		hwmonDir:   filepath.Dir(tempFile),
 		sensorNum:  sensorNum,
 		tempFile:   tempFile,
@@ -194,7 +194,7 @@ func (s *hwTemperatureScraper) buildSensorInfo(tempFile, deviceName string) (sen
 	return sensor, nil
 }
 
-func (s *hwTemperatureScraper) readTemperatureLimits(sensor sensorInfo) temperatureLimits {
+func (s *hardwareTemperatureScraper) readTemperatureLimits(sensor sensorInfo) temperatureLimits {
 	limits := temperatureLimits{}
 
 	limitFiles := map[string]struct {
@@ -220,7 +220,7 @@ func (s *hwTemperatureScraper) readTemperatureLimits(sensor sensorInfo) temperat
 	return limits
 }
 
-func (*hwTemperatureScraper) recordTemperatureLimits(now pcommon.Timestamp, sensor sensorInfo, limits temperatureLimits, mb *metadata.MetricsBuilder) {
+func (*hardwareTemperatureScraper) recordTemperatureLimits(now pcommon.Timestamp, sensor sensorInfo, limits temperatureLimits, mb *metadata.MetricsBuilder) {
 	limitFiles := map[string]struct {
 		limitType string
 		target    *float64
@@ -246,7 +246,7 @@ func (*hwTemperatureScraper) recordTemperatureLimits(now pcommon.Timestamp, sens
 	}
 }
 
-func (*hwTemperatureScraper) getDeviceName(hwmonDir string) string {
+func (*hardwareTemperatureScraper) getDeviceName(hwmonDir string) string {
 	nameFile := filepath.Join(hwmonDir, "name")
 	nameBytes, err := os.ReadFile(nameFile)
 	if err != nil {
@@ -255,14 +255,14 @@ func (*hwTemperatureScraper) getDeviceName(hwmonDir string) string {
 	return strings.TrimSpace(string(nameBytes))
 }
 
-func (*hwTemperatureScraper) getSensorLabel(labelFile, defaultLabel string) string {
+func (*hardwareTemperatureScraper) getSensorLabel(labelFile, defaultLabel string) string {
 	if labelBytes, err := os.ReadFile(labelFile); err == nil {
 		return strings.TrimSpace(string(labelBytes))
 	}
 	return defaultLabel
 }
 
-func (s *hwTemperatureScraper) shouldIncludeSensor(sensorName string) bool {
+func (s *hardwareTemperatureScraper) shouldIncludeSensor(sensorName string) bool {
 	if s.excludeFilter != nil && s.excludeFilter.Matches(sensorName) {
 		return false
 	}

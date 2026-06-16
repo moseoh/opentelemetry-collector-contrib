@@ -19,8 +19,8 @@ import (
 var ErrHwmonUnavailable = errors.New("hwmon not available")
 
 const (
-	hwTemperatureMetricsLen = 2
-	metricsLen              = hwTemperatureMetricsLen
+	hardwareTemperatureMetricsLen = 2
+	metricsLen                    = hardwareTemperatureMetricsLen
 )
 
 // temperatureScraper interface for temperature sensor scraping
@@ -29,7 +29,7 @@ type temperatureScraper interface {
 	scrape(context.Context, *metadata.MetricsBuilder) error
 }
 
-type hwScraper struct {
+type hardwareScraper struct {
 	logger             *zap.Logger
 	mb                 *metadata.MetricsBuilder
 	config             *Config
@@ -37,12 +37,12 @@ type hwScraper struct {
 }
 
 // newHardwareScraper creates a new hardware metrics scraper
-func newHardwareScraper(_ context.Context, settings scraper.Settings, cfg *Config) *hwScraper {
+func newHardwareScraper(_ context.Context, settings scraper.Settings, cfg *Config) *hardwareScraper {
 	mb := metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, settings)
 
 	var tempScraper temperatureScraper
 	if cfg.Temperature != nil {
-		tempScraper = &hwTemperatureScraper{
+		tempScraper = &hardwareTemperatureScraper{
 			logger:               settings.Logger,
 			config:               cfg.Temperature,
 			hwmonPath:            cfg.HwmonPath,
@@ -50,7 +50,7 @@ func newHardwareScraper(_ context.Context, settings scraper.Settings, cfg *Confi
 		}
 	}
 
-	return &hwScraper{
+	return &hardwareScraper{
 		logger:             settings.Logger,
 		mb:                 mb,
 		config:             cfg,
@@ -58,7 +58,7 @@ func newHardwareScraper(_ context.Context, settings scraper.Settings, cfg *Confi
 	}
 }
 
-func (s *hwScraper) start(ctx context.Context, _ component.Host) error {
+func (s *hardwareScraper) start(ctx context.Context, _ component.Host) error {
 	if s.temperatureScraper != nil {
 		if err := s.temperatureScraper.start(ctx); err != nil {
 			return err
@@ -68,7 +68,7 @@ func (s *hwScraper) start(ctx context.Context, _ component.Host) error {
 	return nil
 }
 
-func (s *hwScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
+func (s *hardwareScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 	var errs scrapererror.ScrapeErrors
 
 	if s.temperatureScraper != nil {

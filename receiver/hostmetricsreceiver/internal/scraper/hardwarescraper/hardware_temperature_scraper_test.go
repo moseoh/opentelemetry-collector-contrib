@@ -15,8 +15,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/hardwarescraper/internal/metadata"
 )
 
-func TestHwTemperatureScraperStart(t *testing.T) {
-	scraper := &hwTemperatureScraper{
+func TestHardwareTemperatureScraperStart(t *testing.T) {
+	scraper := &hardwareTemperatureScraper{
 		logger:               zap.NewNop(),
 		config:               &TemperatureConfig{},
 		hwmonPath:            "/sys/class/hwmon",
@@ -28,8 +28,8 @@ func TestHwTemperatureScraperStart(t *testing.T) {
 	assert.Equal(t, ErrHwmonUnavailable, err)
 }
 
-func TestHwTemperatureScraperScrape(t *testing.T) {
-	scraper := &hwTemperatureScraper{
+func TestHardwareTemperatureScraperScrape(t *testing.T) {
+	scraper := &hardwareTemperatureScraper{
 		logger:               zap.NewNop(),
 		config:               &TemperatureConfig{},
 		hwmonPath:            "/sys/class/hwmon",

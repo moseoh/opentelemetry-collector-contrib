@@ -20,7 +20,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/hardwarescraper/internal/metadata"
 )
 
-func TestHwTemperatureScraperStart_Linux(t *testing.T) {
+func TestHardwareTemperatureScraperStart_Linux(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Test is for Linux platform")
 	}
@@ -87,7 +87,7 @@ func TestHwTemperatureScraperStart_Linux(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			scraper := &hwTemperatureScraper{
+			scraper := &hardwareTemperatureScraper{
 				logger:               zap.NewNop(),
 				config:               test.config,
 				hwmonPath:            test.hwmonPath,
@@ -105,7 +105,7 @@ func TestHwTemperatureScraperStart_Linux(t *testing.T) {
 	}
 }
 
-func TestHwTemperatureScraperScrape_Linux(t *testing.T) {
+func TestHardwareTemperatureScraperScrape_Linux(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Test is for Linux platform")
 	}
@@ -204,7 +204,7 @@ func TestHwTemperatureScraperScrape_Linux(t *testing.T) {
 				setupCompleteTestData(t, hwmonPath)
 			}
 
-			scraper := &hwTemperatureScraper{
+			scraper := &hardwareTemperatureScraper{
 				logger:               zap.NewNop(),
 				config:               test.config,
 				hwmonPath:            hwmonPath,
@@ -236,7 +236,7 @@ func TestReadTemperatureCelsius(t *testing.T) {
 	err := os.WriteFile(tempFile, []byte("45000"), 0o600) // 45°C in millicelsius
 	require.NoError(t, err)
 
-	scraper := &hwTemperatureScraper{}
+	scraper := &hardwareTemperatureScraper{}
 	temp, err := scraper.readTemperatureCelsius(tempFile)
 	assert.NoError(t, err)
 	assert.Equal(t, 45.0, temp)
