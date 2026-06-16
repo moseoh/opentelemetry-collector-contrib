@@ -22,12 +22,12 @@ Temperature in degrees Celsius.
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
-| ---- | ----------- | ------ | -------- |
-| id | An identifier for the hardware component, unique within the monitored host. | Any Str | Recommended |
-| name | An easily-recognizable name for the hardware component. | Any Str | Recommended |
-| parent | Unique identifier of the parent component (typically the id attribute of the enclosure, or disk controller). | Any Str | Recommended |
-| sensor_location | Location of the sensor. | Any Str | Recommended |
+| Name | Description | Values | Requirement Level | Semantic Convention |
+| ---- | ----------- | ------ | ----------------- | ------------------- |
+| id | An identifier for the hardware component, unique within the monitored host. | Any Str | Recommended | - |
+| name | An easily-recognizable name for the hardware component. | Any Str | Recommended | - |
+| parent | Unique identifier of the parent component (typically the id attribute of the enclosure, or disk controller). | Any Str | Recommended | - |
+| sensor_location | Location of the sensor. | Any Str | Recommended | - |
 
 ## Optional Metrics
 
@@ -49,13 +49,13 @@ Operational status: 1 (true) or 0 (false) for each of the possible states.
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
-| ---- | ----------- | ------ | -------- |
-| id | An identifier for the hardware component, unique within the monitored host. | Any Str | Recommended |
-| name | An easily-recognizable name for the hardware component. | Any Str | Recommended |
-| parent | Unique identifier of the parent component (typically the id attribute of the enclosure, or disk controller). | Any Str | Recommended |
-| state | The current state of the component. | Str: ``degraded``, ``failed``, ``needs_cleaning``, ``ok``, ``predicted_failure`` | Recommended |
-| type | Type of the component. | Str: ``battery``, ``cpu``, ``disk_controller``, ``enclosure``, ``fan``, ``gpu``, ``logical_disk``, ``memory``, ``network``, ``physical_disk``, ``power_supply``, ``tape_drive``, ``temperature``, ``voltage``, ``unknown`` | Recommended |
+| Name | Description | Values | Requirement Level | Semantic Convention |
+| ---- | ----------- | ------ | ----------------- | ------------------- |
+| id | An identifier for the hardware component, unique within the monitored host. | Any Str | Recommended | - |
+| name | An easily-recognizable name for the hardware component. | Any Str | Recommended | - |
+| parent | Unique identifier of the parent component (typically the id attribute of the enclosure, or disk controller). | Any Str | Recommended | - |
+| state | The current state of the component. | Str: ``degraded``, ``failed``, ``needs_cleaning``, ``ok``, ``predicted_failure`` | Recommended | - |
+| type | Type of the component. | Str: ``battery``, ``cpu``, ``disk_controller``, ``enclosure``, ``fan``, ``gpu``, ``logical_disk``, ``memory``, ``network``, ``physical_disk``, ``power_supply``, ``tape_drive``, ``temperature``, ``voltage``, ``unknown`` | Recommended | - |
 
 ### hw.temperature.limit
 
@@ -67,10 +67,10 @@ Temperature limit in degrees Celsius.
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
-| ---- | ----------- | ------ | -------- |
-| id | An identifier for the hardware component, unique within the monitored host. | Any Str | Recommended |
-| limit_type | Type of limit for hardware components. | Str: ``high.critical``, ``high.degraded``, ``low.critical``, ``low.degraded`` | Recommended |
-| name | An easily-recognizable name for the hardware component. | Any Str | Recommended |
-| parent | Unique identifier of the parent component (typically the id attribute of the enclosure, or disk controller). | Any Str | Recommended |
-| sensor_location | Location of the sensor. | Any Str | Recommended |
+| Name | Description | Values | Requirement Level | Semantic Convention |
+| ---- | ----------- | ------ | ----------------- | ------------------- |
+| id | An identifier for the hardware component, unique within the monitored host. | Any Str | Recommended | - |
+| limit_type | Type of limit for hardware components. | Str: ``high.critical``, ``high.degraded``, ``low.critical``, ``low.degraded`` | Recommended | - |
+| name | An easily-recognizable name for the hardware component. | Any Str | Recommended | - |
+| parent | Unique identifier of the parent component (typically the id attribute of the enclosure, or disk controller). | Any Str | Recommended | - |
+| sensor_location | Location of the sensor. | Any Str | Recommended | - |

@@ -3,16 +3,32 @@
 package metadata
 
 import (
+	"fmt"
+
 	"go.opentelemetry.io/collector/confmap"
 )
 
-// MetricConfig provides common config for a particular metric.
-type MetricConfig struct {
+// HwStatusMetricAttributeKey specifies the key of an attribute for the hw.status metric.
+type HwStatusMetricAttributeKey string
+
+const (
+	HwStatusMetricAttributeKeyID     HwStatusMetricAttributeKey = "id"
+	HwStatusMetricAttributeKeyName   HwStatusMetricAttributeKey = "name"
+	HwStatusMetricAttributeKeyParent HwStatusMetricAttributeKey = "parent"
+	HwStatusMetricAttributeKeyState  HwStatusMetricAttributeKey = "state"
+	HwStatusMetricAttributeKeyType   HwStatusMetricAttributeKey = "type"
+)
+
+// HwStatusMetricConfig provides config for the hw.status metric.
+type HwStatusMetricConfig struct {
 	Enabled          bool `mapstructure:"enabled"`
 	enabledSetByUser bool
+
+	AggregationStrategy string                       `mapstructure:"aggregation_strategy"`
+	EnabledAttributes   []HwStatusMetricAttributeKey `mapstructure:"attributes"`
 }
 
-func (ms *MetricConfig) Unmarshal(parser *confmap.Conf) error {
+func (ms *HwStatusMetricConfig) Unmarshal(parser *confmap.Conf) error {
 	if parser == nil {
 		return nil
 	}
@@ -26,23 +42,150 @@ func (ms *MetricConfig) Unmarshal(parser *confmap.Conf) error {
 	return nil
 }
 
+func (ms *HwStatusMetricConfig) Validate() error {
+	for _, val := range ms.EnabledAttributes {
+		switch val {
+		case HwStatusMetricAttributeKeyID, HwStatusMetricAttributeKeyName, HwStatusMetricAttributeKeyParent, HwStatusMetricAttributeKeyState, HwStatusMetricAttributeKeyType:
+		default:
+			return fmt.Errorf("metric hw.status doesn't have an attribute %v, valid attributes: [id, name, parent, state, type]", val)
+		}
+	}
+
+	switch ms.AggregationStrategy {
+	case AggregationStrategySum, AggregationStrategyAvg, AggregationStrategyMin, AggregationStrategyMax:
+	default:
+		return fmt.Errorf("invalid aggregation strategy %q, valid strategies: [%s, %s, %s, %s]", ms.AggregationStrategy, AggregationStrategySum, AggregationStrategyAvg, AggregationStrategyMin, AggregationStrategyMax)
+	}
+
+	return nil
+}
+
+// HwTemperatureMetricAttributeKey specifies the key of an attribute for the hw.temperature metric.
+type HwTemperatureMetricAttributeKey string
+
+const (
+	HwTemperatureMetricAttributeKeyID             HwTemperatureMetricAttributeKey = "id"
+	HwTemperatureMetricAttributeKeyName           HwTemperatureMetricAttributeKey = "name"
+	HwTemperatureMetricAttributeKeyParent         HwTemperatureMetricAttributeKey = "parent"
+	HwTemperatureMetricAttributeKeySensorLocation HwTemperatureMetricAttributeKey = "sensor_location"
+)
+
+// HwTemperatureMetricConfig provides config for the hw.temperature metric.
+type HwTemperatureMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+
+	AggregationStrategy string                            `mapstructure:"aggregation_strategy"`
+	EnabledAttributes   []HwTemperatureMetricAttributeKey `mapstructure:"attributes"`
+}
+
+func (ms *HwTemperatureMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+func (ms *HwTemperatureMetricConfig) Validate() error {
+	for _, val := range ms.EnabledAttributes {
+		switch val {
+		case HwTemperatureMetricAttributeKeyID, HwTemperatureMetricAttributeKeyName, HwTemperatureMetricAttributeKeyParent, HwTemperatureMetricAttributeKeySensorLocation:
+		default:
+			return fmt.Errorf("metric hw.temperature doesn't have an attribute %v, valid attributes: [id, name, parent, sensor_location]", val)
+		}
+	}
+
+	switch ms.AggregationStrategy {
+	case AggregationStrategySum, AggregationStrategyAvg, AggregationStrategyMin, AggregationStrategyMax:
+	default:
+		return fmt.Errorf("invalid aggregation strategy %q, valid strategies: [%s, %s, %s, %s]", ms.AggregationStrategy, AggregationStrategySum, AggregationStrategyAvg, AggregationStrategyMin, AggregationStrategyMax)
+	}
+
+	return nil
+}
+
+// HwTemperatureLimitMetricAttributeKey specifies the key of an attribute for the hw.temperature.limit metric.
+type HwTemperatureLimitMetricAttributeKey string
+
+const (
+	HwTemperatureLimitMetricAttributeKeyID             HwTemperatureLimitMetricAttributeKey = "id"
+	HwTemperatureLimitMetricAttributeKeyLimitType      HwTemperatureLimitMetricAttributeKey = "limit_type"
+	HwTemperatureLimitMetricAttributeKeyName           HwTemperatureLimitMetricAttributeKey = "name"
+	HwTemperatureLimitMetricAttributeKeyParent         HwTemperatureLimitMetricAttributeKey = "parent"
+	HwTemperatureLimitMetricAttributeKeySensorLocation HwTemperatureLimitMetricAttributeKey = "sensor_location"
+)
+
+// HwTemperatureLimitMetricConfig provides config for the hw.temperature.limit metric.
+type HwTemperatureLimitMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+
+	AggregationStrategy string                                 `mapstructure:"aggregation_strategy"`
+	EnabledAttributes   []HwTemperatureLimitMetricAttributeKey `mapstructure:"attributes"`
+}
+
+func (ms *HwTemperatureLimitMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+func (ms *HwTemperatureLimitMetricConfig) Validate() error {
+	for _, val := range ms.EnabledAttributes {
+		switch val {
+		case HwTemperatureLimitMetricAttributeKeyID, HwTemperatureLimitMetricAttributeKeyLimitType, HwTemperatureLimitMetricAttributeKeyName, HwTemperatureLimitMetricAttributeKeyParent, HwTemperatureLimitMetricAttributeKeySensorLocation:
+		default:
+			return fmt.Errorf("metric hw.temperature.limit doesn't have an attribute %v, valid attributes: [id, limit_type, name, parent, sensor_location]", val)
+		}
+	}
+
+	switch ms.AggregationStrategy {
+	case AggregationStrategySum, AggregationStrategyAvg, AggregationStrategyMin, AggregationStrategyMax:
+	default:
+		return fmt.Errorf("invalid aggregation strategy %q, valid strategies: [%s, %s, %s, %s]", ms.AggregationStrategy, AggregationStrategySum, AggregationStrategyAvg, AggregationStrategyMin, AggregationStrategyMax)
+	}
+
+	return nil
+}
+
 // MetricsConfig provides config for hardware metrics.
 type MetricsConfig struct {
-	HwStatus           MetricConfig `mapstructure:"hw.status"`
-	HwTemperature      MetricConfig `mapstructure:"hw.temperature"`
-	HwTemperatureLimit MetricConfig `mapstructure:"hw.temperature.limit"`
+	HwStatus           HwStatusMetricConfig           `mapstructure:"hw.status"`
+	HwTemperature      HwTemperatureMetricConfig      `mapstructure:"hw.temperature"`
+	HwTemperatureLimit HwTemperatureLimitMetricConfig `mapstructure:"hw.temperature.limit"`
 }
 
 func DefaultMetricsConfig() MetricsConfig {
 	return MetricsConfig{
-		HwStatus: MetricConfig{
-			Enabled: false,
+		HwStatus: HwStatusMetricConfig{
+			Enabled:             false,
+			AggregationStrategy: AggregationStrategySum,
+			EnabledAttributes:   []HwStatusMetricAttributeKey{HwStatusMetricAttributeKeyID, HwStatusMetricAttributeKeyName, HwStatusMetricAttributeKeyParent, HwStatusMetricAttributeKeyState, HwStatusMetricAttributeKeyType},
 		},
-		HwTemperature: MetricConfig{
-			Enabled: true,
+		HwTemperature: HwTemperatureMetricConfig{
+			Enabled:             true,
+			AggregationStrategy: AggregationStrategyAvg,
+			EnabledAttributes:   []HwTemperatureMetricAttributeKey{HwTemperatureMetricAttributeKeyID, HwTemperatureMetricAttributeKeyName, HwTemperatureMetricAttributeKeyParent, HwTemperatureMetricAttributeKeySensorLocation},
 		},
-		HwTemperatureLimit: MetricConfig{
-			Enabled: false,
+		HwTemperatureLimit: HwTemperatureLimitMetricConfig{
+			Enabled:             false,
+			AggregationStrategy: AggregationStrategyAvg,
+			EnabledAttributes:   []HwTemperatureLimitMetricAttributeKey{HwTemperatureLimitMetricAttributeKeyID, HwTemperatureLimitMetricAttributeKeyLimitType, HwTemperatureLimitMetricAttributeKeyName, HwTemperatureLimitMetricAttributeKeyParent, HwTemperatureLimitMetricAttributeKeySensorLocation},
 		},
 	}
 }
@@ -52,8 +195,13 @@ type MetricsBuilderConfig struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`
 }
 
-func DefaultMetricsBuilderConfig() MetricsBuilderConfig {
+func NewDefaultMetricsBuilderConfig() MetricsBuilderConfig {
 	return MetricsBuilderConfig{
 		Metrics: DefaultMetricsConfig(),
 	}
+}
+
+// Deprecated: Use NewDefaultMetricsBuilderConfig.
+func DefaultMetricsBuilderConfig() MetricsBuilderConfig {
+	return NewDefaultMetricsBuilderConfig()
 }

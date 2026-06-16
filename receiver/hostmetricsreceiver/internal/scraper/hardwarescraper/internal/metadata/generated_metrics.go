@@ -3,6 +3,7 @@
 package metadata
 
 import (
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -10,6 +11,13 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/scraper"
 	conventions "go.opentelemetry.io/otel/semconv/v1.9.0"
+)
+
+const (
+	AggregationStrategySum = "sum"
+	AggregationStrategyAvg = "avg"
+	AggregationStrategyMin = "min"
+	AggregationStrategyMax = "max"
 )
 
 // AttributeLimitType specifies the value limit_type attribute.
@@ -90,7 +98,7 @@ type AttributeType int
 const (
 	_ AttributeType = iota
 	AttributeTypeBattery
-	AttributeTypeCpu
+	AttributeTypeCPU
 	AttributeTypeDiskController
 	AttributeTypeEnclosure
 	AttributeTypeFan
@@ -111,7 +119,7 @@ func (av AttributeType) String() string {
 	switch av {
 	case AttributeTypeBattery:
 		return "battery"
-	case AttributeTypeCpu:
+	case AttributeTypeCPU:
 		return "cpu"
 	case AttributeTypeDiskController:
 		return "disk_controller"
@@ -146,7 +154,7 @@ func (av AttributeType) String() string {
 // MapAttributeType is a helper map of string to AttributeType attribute value.
 var MapAttributeType = map[string]AttributeType{
 	"battery":         AttributeTypeBattery,
-	"cpu":             AttributeTypeCpu,
+	"cpu":             AttributeTypeCPU,
 	"disk_controller": AttributeTypeDiskController,
 	"enclosure":       AttributeTypeEnclosure,
 	"fan":             AttributeTypeFan,
@@ -185,9 +193,10 @@ type metricInfo struct {
 }
 
 type metricHwStatus struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data          pmetric.Metric       // data buffer for generated metric.
+	config        HwStatusMetricConfig // metric config provided by user.
+	capacity      int                  // max observed number of data points added to the metric.
+	aggDataPoints []int64              // slice containing number of aggregated datapoints at each index
 }
 
 // init fills hw.status metric with initial data.
@@ -199,21 +208,60 @@ func (m *metricHwStatus) init() {
 	m.data.Sum().SetIsMonotonic(false)
 	m.data.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 	m.data.Sum().DataPoints().EnsureCapacity(m.capacity)
+	m.aggDataPoints = m.aggDataPoints[:0]
 }
 
 func (m *metricHwStatus) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64, idAttributeValue string, nameAttributeValue string, parentAttributeValue string, stateAttributeValue string, typeAttributeValue string) {
 	if !m.config.Enabled {
 		return
 	}
-	dp := m.data.Sum().DataPoints().AppendEmpty()
+
+	dp := pmetric.NewNumberDataPoint()
 	dp.SetStartTimestamp(start)
 	dp.SetTimestamp(ts)
+	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyID) {
+		dp.Attributes().PutStr("id", idAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyName) {
+		dp.Attributes().PutStr("name", nameAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyParent) {
+		dp.Attributes().PutStr("parent", parentAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyState) {
+		dp.Attributes().PutStr("state", stateAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwStatusMetricAttributeKeyType) {
+		dp.Attributes().PutStr("type", typeAttributeValue)
+	}
+
+	var s string
+	dps := m.data.Sum().DataPoints()
+	for i := 0; i < dps.Len(); i++ {
+		dpi := dps.At(i)
+		if dp.Attributes().Equal(dpi.Attributes()) && dp.StartTimestamp() == dpi.StartTimestamp() && dp.Timestamp() == dpi.Timestamp() {
+			switch s = m.config.AggregationStrategy; s {
+			case AggregationStrategySum, AggregationStrategyAvg:
+				dpi.SetIntValue(dpi.IntValue() + val)
+				m.aggDataPoints[i] += 1
+				return
+			case AggregationStrategyMin:
+				if dpi.IntValue() > val {
+					dpi.SetIntValue(val)
+				}
+				return
+			case AggregationStrategyMax:
+				if dpi.IntValue() < val {
+					dpi.SetIntValue(val)
+				}
+				return
+			}
+		}
+	}
+
 	dp.SetIntValue(val)
-	dp.Attributes().PutStr("id", idAttributeValue)
-	dp.Attributes().PutStr("name", nameAttributeValue)
-	dp.Attributes().PutStr("parent", parentAttributeValue)
-	dp.Attributes().PutStr("state", stateAttributeValue)
-	dp.Attributes().PutStr("type", typeAttributeValue)
+	m.aggDataPoints = append(m.aggDataPoints, 1)
+	dp.MoveTo(dps.AppendEmpty())
 }
 
 // updateCapacity saves max length of data point slices that will be used for the slice capacity.
@@ -226,13 +274,18 @@ func (m *metricHwStatus) updateCapacity() {
 // emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
 func (m *metricHwStatus) emit(metrics pmetric.MetricSlice) {
 	if m.config.Enabled && m.data.Sum().DataPoints().Len() > 0 {
+		if m.config.AggregationStrategy == AggregationStrategyAvg {
+			for i, aggCount := range m.aggDataPoints {
+				m.data.Sum().DataPoints().At(i).SetIntValue(m.data.Sum().DataPoints().At(i).IntValue() / aggCount)
+			}
+		}
 		m.updateCapacity()
 		m.data.MoveTo(metrics.AppendEmpty())
 		m.init()
 	}
 }
 
-func newMetricHwStatus(cfg MetricConfig) metricHwStatus {
+func newMetricHwStatus(cfg HwStatusMetricConfig) metricHwStatus {
 	m := metricHwStatus{config: cfg}
 
 	if cfg.Enabled {
@@ -243,9 +296,10 @@ func newMetricHwStatus(cfg MetricConfig) metricHwStatus {
 }
 
 type metricHwTemperature struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data          pmetric.Metric            // data buffer for generated metric.
+	config        HwTemperatureMetricConfig // metric config provided by user.
+	capacity      int                       // max observed number of data points added to the metric.
+	aggDataPoints []float64                 // slice containing number of aggregated datapoints at each index
 }
 
 // init fills hw.temperature metric with initial data.
@@ -255,20 +309,57 @@ func (m *metricHwTemperature) init() {
 	m.data.SetUnit("Cel")
 	m.data.SetEmptyGauge()
 	m.data.Gauge().DataPoints().EnsureCapacity(m.capacity)
+	m.aggDataPoints = m.aggDataPoints[:0]
 }
 
 func (m *metricHwTemperature) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val float64, idAttributeValue string, nameAttributeValue string, parentAttributeValue string, sensorLocationAttributeValue string) {
 	if !m.config.Enabled {
 		return
 	}
-	dp := m.data.Gauge().DataPoints().AppendEmpty()
+
+	dp := pmetric.NewNumberDataPoint()
 	dp.SetStartTimestamp(start)
 	dp.SetTimestamp(ts)
+	if slices.Contains(m.config.EnabledAttributes, HwTemperatureMetricAttributeKeyID) {
+		dp.Attributes().PutStr("id", idAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwTemperatureMetricAttributeKeyName) {
+		dp.Attributes().PutStr("name", nameAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwTemperatureMetricAttributeKeyParent) {
+		dp.Attributes().PutStr("parent", parentAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwTemperatureMetricAttributeKeySensorLocation) {
+		dp.Attributes().PutStr("sensor_location", sensorLocationAttributeValue)
+	}
+
+	var s string
+	dps := m.data.Gauge().DataPoints()
+	for i := 0; i < dps.Len(); i++ {
+		dpi := dps.At(i)
+		if dp.Attributes().Equal(dpi.Attributes()) && dp.StartTimestamp() == dpi.StartTimestamp() && dp.Timestamp() == dpi.Timestamp() {
+			switch s = m.config.AggregationStrategy; s {
+			case AggregationStrategySum, AggregationStrategyAvg:
+				dpi.SetDoubleValue(dpi.DoubleValue() + val)
+				m.aggDataPoints[i] += 1
+				return
+			case AggregationStrategyMin:
+				if dpi.DoubleValue() > val {
+					dpi.SetDoubleValue(val)
+				}
+				return
+			case AggregationStrategyMax:
+				if dpi.DoubleValue() < val {
+					dpi.SetDoubleValue(val)
+				}
+				return
+			}
+		}
+	}
+
 	dp.SetDoubleValue(val)
-	dp.Attributes().PutStr("id", idAttributeValue)
-	dp.Attributes().PutStr("name", nameAttributeValue)
-	dp.Attributes().PutStr("parent", parentAttributeValue)
-	dp.Attributes().PutStr("sensor_location", sensorLocationAttributeValue)
+	m.aggDataPoints = append(m.aggDataPoints, 1)
+	dp.MoveTo(dps.AppendEmpty())
 }
 
 // updateCapacity saves max length of data point slices that will be used for the slice capacity.
@@ -281,13 +372,18 @@ func (m *metricHwTemperature) updateCapacity() {
 // emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
 func (m *metricHwTemperature) emit(metrics pmetric.MetricSlice) {
 	if m.config.Enabled && m.data.Gauge().DataPoints().Len() > 0 {
+		if m.config.AggregationStrategy == AggregationStrategyAvg {
+			for i, aggCount := range m.aggDataPoints {
+				m.data.Gauge().DataPoints().At(i).SetDoubleValue(m.data.Gauge().DataPoints().At(i).DoubleValue() / aggCount)
+			}
+		}
 		m.updateCapacity()
 		m.data.MoveTo(metrics.AppendEmpty())
 		m.init()
 	}
 }
 
-func newMetricHwTemperature(cfg MetricConfig) metricHwTemperature {
+func newMetricHwTemperature(cfg HwTemperatureMetricConfig) metricHwTemperature {
 	m := metricHwTemperature{config: cfg}
 
 	if cfg.Enabled {
@@ -298,9 +394,10 @@ func newMetricHwTemperature(cfg MetricConfig) metricHwTemperature {
 }
 
 type metricHwTemperatureLimit struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data          pmetric.Metric                 // data buffer for generated metric.
+	config        HwTemperatureLimitMetricConfig // metric config provided by user.
+	capacity      int                            // max observed number of data points added to the metric.
+	aggDataPoints []float64                      // slice containing number of aggregated datapoints at each index
 }
 
 // init fills hw.temperature.limit metric with initial data.
@@ -310,21 +407,60 @@ func (m *metricHwTemperatureLimit) init() {
 	m.data.SetUnit("Cel")
 	m.data.SetEmptyGauge()
 	m.data.Gauge().DataPoints().EnsureCapacity(m.capacity)
+	m.aggDataPoints = m.aggDataPoints[:0]
 }
 
 func (m *metricHwTemperatureLimit) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val float64, idAttributeValue string, limitTypeAttributeValue string, nameAttributeValue string, parentAttributeValue string, sensorLocationAttributeValue string) {
 	if !m.config.Enabled {
 		return
 	}
-	dp := m.data.Gauge().DataPoints().AppendEmpty()
+
+	dp := pmetric.NewNumberDataPoint()
 	dp.SetStartTimestamp(start)
 	dp.SetTimestamp(ts)
+	if slices.Contains(m.config.EnabledAttributes, HwTemperatureLimitMetricAttributeKeyID) {
+		dp.Attributes().PutStr("id", idAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwTemperatureLimitMetricAttributeKeyLimitType) {
+		dp.Attributes().PutStr("limit_type", limitTypeAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwTemperatureLimitMetricAttributeKeyName) {
+		dp.Attributes().PutStr("name", nameAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwTemperatureLimitMetricAttributeKeyParent) {
+		dp.Attributes().PutStr("parent", parentAttributeValue)
+	}
+	if slices.Contains(m.config.EnabledAttributes, HwTemperatureLimitMetricAttributeKeySensorLocation) {
+		dp.Attributes().PutStr("sensor_location", sensorLocationAttributeValue)
+	}
+
+	var s string
+	dps := m.data.Gauge().DataPoints()
+	for i := 0; i < dps.Len(); i++ {
+		dpi := dps.At(i)
+		if dp.Attributes().Equal(dpi.Attributes()) && dp.StartTimestamp() == dpi.StartTimestamp() && dp.Timestamp() == dpi.Timestamp() {
+			switch s = m.config.AggregationStrategy; s {
+			case AggregationStrategySum, AggregationStrategyAvg:
+				dpi.SetDoubleValue(dpi.DoubleValue() + val)
+				m.aggDataPoints[i] += 1
+				return
+			case AggregationStrategyMin:
+				if dpi.DoubleValue() > val {
+					dpi.SetDoubleValue(val)
+				}
+				return
+			case AggregationStrategyMax:
+				if dpi.DoubleValue() < val {
+					dpi.SetDoubleValue(val)
+				}
+				return
+			}
+		}
+	}
+
 	dp.SetDoubleValue(val)
-	dp.Attributes().PutStr("id", idAttributeValue)
-	dp.Attributes().PutStr("limit_type", limitTypeAttributeValue)
-	dp.Attributes().PutStr("name", nameAttributeValue)
-	dp.Attributes().PutStr("parent", parentAttributeValue)
-	dp.Attributes().PutStr("sensor_location", sensorLocationAttributeValue)
+	m.aggDataPoints = append(m.aggDataPoints, 1)
+	dp.MoveTo(dps.AppendEmpty())
 }
 
 // updateCapacity saves max length of data point slices that will be used for the slice capacity.
@@ -337,13 +473,18 @@ func (m *metricHwTemperatureLimit) updateCapacity() {
 // emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
 func (m *metricHwTemperatureLimit) emit(metrics pmetric.MetricSlice) {
 	if m.config.Enabled && m.data.Gauge().DataPoints().Len() > 0 {
+		if m.config.AggregationStrategy == AggregationStrategyAvg {
+			for i, aggCount := range m.aggDataPoints {
+				m.data.Gauge().DataPoints().At(i).SetDoubleValue(m.data.Gauge().DataPoints().At(i).DoubleValue() / aggCount)
+			}
+		}
 		m.updateCapacity()
 		m.data.MoveTo(metrics.AppendEmpty())
 		m.init()
 	}
 }
 
-func newMetricHwTemperatureLimit(cfg MetricConfig) metricHwTemperatureLimit {
+func newMetricHwTemperatureLimit(cfg HwTemperatureLimitMetricConfig) metricHwTemperatureLimit {
 	m := metricHwTemperatureLimit{config: cfg}
 
 	if cfg.Enabled {

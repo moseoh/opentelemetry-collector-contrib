@@ -20,20 +20,26 @@ func TestMetricsBuilderConfig(t *testing.T) {
 	}{
 		{
 			name: "default",
-			want: DefaultMetricsBuilderConfig(),
+			want: NewDefaultMetricsBuilderConfig(),
 		},
 		{
 			name: "all_set",
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
-					HwStatus: MetricConfig{
-						Enabled: true,
+					HwStatus: HwStatusMetricConfig{
+						Enabled:             true,
+						AggregationStrategy: AggregationStrategySum,
+						EnabledAttributes:   []HwStatusMetricAttributeKey{HwStatusMetricAttributeKeyID, HwStatusMetricAttributeKeyName, HwStatusMetricAttributeKeyParent, HwStatusMetricAttributeKeyState, HwStatusMetricAttributeKeyType},
 					},
-					HwTemperature: MetricConfig{
-						Enabled: true,
+					HwTemperature: HwTemperatureMetricConfig{
+						Enabled:             true,
+						AggregationStrategy: AggregationStrategyAvg,
+						EnabledAttributes:   []HwTemperatureMetricAttributeKey{HwTemperatureMetricAttributeKeyID, HwTemperatureMetricAttributeKeyName, HwTemperatureMetricAttributeKeyParent, HwTemperatureMetricAttributeKeySensorLocation},
 					},
-					HwTemperatureLimit: MetricConfig{
-						Enabled: true,
+					HwTemperatureLimit: HwTemperatureLimitMetricConfig{
+						Enabled:             true,
+						AggregationStrategy: AggregationStrategyAvg,
+						EnabledAttributes:   []HwTemperatureLimitMetricAttributeKey{HwTemperatureLimitMetricAttributeKeyID, HwTemperatureLimitMetricAttributeKeyLimitType, HwTemperatureLimitMetricAttributeKeyName, HwTemperatureLimitMetricAttributeKeyParent, HwTemperatureLimitMetricAttributeKeySensorLocation},
 					},
 				},
 			},
@@ -42,14 +48,20 @@ func TestMetricsBuilderConfig(t *testing.T) {
 			name: "none_set",
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
-					HwStatus: MetricConfig{
-						Enabled: false,
+					HwStatus: HwStatusMetricConfig{
+						Enabled:             false,
+						AggregationStrategy: AggregationStrategySum,
+						EnabledAttributes:   []HwStatusMetricAttributeKey{HwStatusMetricAttributeKeyID, HwStatusMetricAttributeKeyName, HwStatusMetricAttributeKeyParent, HwStatusMetricAttributeKeyState, HwStatusMetricAttributeKeyType},
 					},
-					HwTemperature: MetricConfig{
-						Enabled: false,
+					HwTemperature: HwTemperatureMetricConfig{
+						Enabled:             false,
+						AggregationStrategy: AggregationStrategyAvg,
+						EnabledAttributes:   []HwTemperatureMetricAttributeKey{HwTemperatureMetricAttributeKeyID, HwTemperatureMetricAttributeKeyName, HwTemperatureMetricAttributeKeyParent, HwTemperatureMetricAttributeKeySensorLocation},
 					},
-					HwTemperatureLimit: MetricConfig{
-						Enabled: false,
+					HwTemperatureLimit: HwTemperatureLimitMetricConfig{
+						Enabled:             false,
+						AggregationStrategy: AggregationStrategyAvg,
+						EnabledAttributes:   []HwTemperatureLimitMetricAttributeKey{HwTemperatureLimitMetricAttributeKeyID, HwTemperatureLimitMetricAttributeKeyLimitType, HwTemperatureLimitMetricAttributeKeyName, HwTemperatureLimitMetricAttributeKeyParent, HwTemperatureLimitMetricAttributeKeySensorLocation},
 					},
 				},
 			},
@@ -58,7 +70,7 @@ func TestMetricsBuilderConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := loadMetricsBuilderConfig(t, tt.name)
-			diff := cmp.Diff(tt.want, cfg, cmpopts.IgnoreUnexported(MetricConfig{}))
+			diff := cmp.Diff(tt.want, cfg, cmpopts.IgnoreUnexported(HwStatusMetricConfig{}, HwTemperatureMetricConfig{}, HwTemperatureLimitMetricConfig{}))
 			require.Emptyf(t, diff, "Config mismatch (-expected +actual):\n%s", diff)
 		})
 	}
@@ -69,7 +81,7 @@ func loadMetricsBuilderConfig(t *testing.T, name string) MetricsBuilderConfig {
 	require.NoError(t, err)
 	sub, err := cm.Sub(name)
 	require.NoError(t, err)
-	cfg := DefaultMetricsBuilderConfig()
+	cfg := NewDefaultMetricsBuilderConfig()
 	require.NoError(t, sub.Unmarshal(&cfg, confmap.WithIgnoreUnused()))
 	return cfg
 }

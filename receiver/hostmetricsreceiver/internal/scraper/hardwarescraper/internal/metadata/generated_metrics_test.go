@@ -19,6 +19,7 @@ const (
 	testDataSetDefault testDataSet = iota
 	testDataSetAll
 	testDataSetNone
+	testDataSetReag
 )
 
 func TestMetricsBuilder(t *testing.T) {
@@ -37,6 +38,11 @@ func TestMetricsBuilder(t *testing.T) {
 			resAttrsSet: testDataSetAll,
 		},
 		{
+			name:        "reaggregate_set",
+			metricsSet:  testDataSetReag,
+			resAttrsSet: testDataSetReag,
+		},
+		{
 			name:        "none_set",
 			metricsSet:  testDataSetNone,
 			resAttrsSet: testDataSetNone,
@@ -51,25 +57,45 @@ func TestMetricsBuilder(t *testing.T) {
 			settings := scrapertest.NewNopSettings(scrapertest.NopType)
 			settings.Logger = zap.New(observedZapCore)
 			mb := NewMetricsBuilder(loadMetricsBuilderConfig(t, tt.name), settings, WithStartTime(start))
+			aggMap := make(map[string]string) // contains the aggregation strategies for each metric name
+			aggMap["hw.status"] = mb.metricHwStatus.config.AggregationStrategy
+			aggMap["hw.temperature"] = mb.metricHwTemperature.config.AggregationStrategy
+			aggMap["hw.temperature.limit"] = mb.metricHwTemperatureLimit.config.AggregationStrategy
 
 			expectedWarnings := 0
-			assert.Equal(t, expectedWarnings, observedLogs.Len())
+			if tt.metricsSet != testDataSetReag {
+				assert.Equal(t, expectedWarnings, observedLogs.Len())
+			}
 
 			defaultMetricsCount := 0
 			allMetricsCount := 0
 
 			allMetricsCount++
 			mb.RecordHwStatusDataPoint(ts, 1, "id-val", "name-val", "parent-val", AttributeStateDegraded, AttributeTypeBattery)
+			if tt.name == "reaggregate_set" {
+				mb.RecordHwStatusDataPoint(ts, 3, "id-val-2", "name-val-2", "parent-val-2", AttributeStateFailed, AttributeTypeCPU)
+			}
 
 			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordHwTemperatureDataPoint(ts, 1, "id-val", "name-val", "parent-val", "sensor_location-val")
+			if tt.name == "reaggregate_set" {
+				mb.RecordHwTemperatureDataPoint(ts, 3, "id-val-2", "name-val-2", "parent-val-2", "sensor_location-val-2")
+			}
 
 			allMetricsCount++
 			mb.RecordHwTemperatureLimitDataPoint(ts, 1, "id-val", AttributeLimitTypeHighCritical, "name-val", "parent-val", "sensor_location-val")
+			if tt.name == "reaggregate_set" {
+				mb.RecordHwTemperatureLimitDataPoint(ts, 3, "id-val-2", AttributeLimitTypeHighDegraded, "name-val-2", "parent-val-2", "sensor_location-val-2")
+			}
 
 			res := pcommon.NewResource()
 			metrics := mb.Emit(WithResource(res))
+			if tt.name == "reaggregate_set" {
+				assert.Empty(t, mb.metricHwStatus.aggDataPoints)
+				assert.Empty(t, mb.metricHwTemperature.aggDataPoints)
+				assert.Empty(t, mb.metricHwTemperatureLimit.aggDataPoints)
+			}
 
 			if tt.expectEmpty {
 				assert.Equal(t, 0, metrics.ResourceMetrics().Len())
@@ -97,85 +123,184 @@ func TestMetricsBuilder(t *testing.T) {
 			for _, mi := range allMetricsList {
 				switch mi.Name() {
 				case "hw.status":
-					assert.False(t, validatedMetrics["hw.status"], "Found a duplicate in the metrics slice: hw.status")
-					validatedMetrics["hw.status"] = true
-					assert.Equal(t, pmetric.MetricTypeSum, mi.Type())
-					assert.Equal(t, 1, mi.Sum().DataPoints().Len())
-					assert.Equal(t, "Operational status: 1 (true) or 0 (false) for each of the possible states.", mi.Description())
-					assert.Equal(t, "1", mi.Unit())
-					assert.False(t, mi.Sum().IsMonotonic())
-					assert.Equal(t, pmetric.AggregationTemporalityCumulative, mi.Sum().AggregationTemporality())
-					dp := mi.Sum().DataPoints().At(0)
-					assert.Equal(t, start, dp.StartTimestamp())
-					assert.Equal(t, ts, dp.Timestamp())
-					assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
-					assert.Equal(t, int64(1), dp.IntValue())
-					attrVal, ok := dp.Attributes().Get("id")
-					assert.True(t, ok)
-					assert.Equal(t, "id-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("name")
-					assert.True(t, ok)
-					assert.Equal(t, "name-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("parent")
-					assert.True(t, ok)
-					assert.Equal(t, "parent-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("state")
-					assert.True(t, ok)
-					assert.Equal(t, "degraded", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("type")
-					assert.True(t, ok)
-					assert.Equal(t, "battery", attrVal.Str())
+					if tt.name != "reaggregate_set" {
+						assert.False(t, validatedMetrics["hw.status"], "Found a duplicate in the metrics slice: hw.status")
+						validatedMetrics["hw.status"] = true
+						assert.Equal(t, pmetric.MetricTypeSum, mi.Type())
+						assert.Equal(t, 1, mi.Sum().DataPoints().Len())
+						assert.Equal(t, "Operational status: 1 (true) or 0 (false) for each of the possible states.", mi.Description())
+						assert.Equal(t, "1", mi.Unit())
+						assert.False(t, mi.Sum().IsMonotonic())
+						assert.Equal(t, pmetric.AggregationTemporalityCumulative, mi.Sum().AggregationTemporality())
+						dp := mi.Sum().DataPoints().At(0)
+						assert.Equal(t, start, dp.StartTimestamp())
+						assert.Equal(t, ts, dp.Timestamp())
+						assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
+						assert.Equal(t, int64(1), dp.IntValue())
+						idAttrVal, ok := dp.Attributes().Get("id")
+						assert.True(t, ok)
+						assert.Equal(t, "id-val", idAttrVal.Str())
+						nameAttrVal, ok := dp.Attributes().Get("name")
+						assert.True(t, ok)
+						assert.Equal(t, "name-val", nameAttrVal.Str())
+						parentAttrVal, ok := dp.Attributes().Get("parent")
+						assert.True(t, ok)
+						assert.Equal(t, "parent-val", parentAttrVal.Str())
+						stateAttrVal, ok := dp.Attributes().Get("state")
+						assert.True(t, ok)
+						assert.Equal(t, "degraded", stateAttrVal.Str())
+						typeAttrVal, ok := dp.Attributes().Get("type")
+						assert.True(t, ok)
+						assert.Equal(t, "battery", typeAttrVal.Str())
+					} else {
+						assert.False(t, validatedMetrics["hw.status"], "Found a duplicate in the metrics slice: hw.status")
+						validatedMetrics["hw.status"] = true
+						assert.Equal(t, pmetric.MetricTypeSum, mi.Type())
+						assert.Equal(t, 1, mi.Sum().DataPoints().Len())
+						assert.Equal(t, "Operational status: 1 (true) or 0 (false) for each of the possible states.", mi.Description())
+						assert.Equal(t, "1", mi.Unit())
+						assert.False(t, mi.Sum().IsMonotonic())
+						assert.Equal(t, pmetric.AggregationTemporalityCumulative, mi.Sum().AggregationTemporality())
+						dp := mi.Sum().DataPoints().At(0)
+						assert.Equal(t, start, dp.StartTimestamp())
+						assert.Equal(t, ts, dp.Timestamp())
+						assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
+						switch aggMap["hw.status"] {
+						case "sum":
+							assert.Equal(t, int64(4), dp.IntValue())
+						case "avg":
+							assert.Equal(t, int64(2), dp.IntValue())
+						case "min":
+							assert.Equal(t, int64(1), dp.IntValue())
+						case "max":
+							assert.Equal(t, int64(3), dp.IntValue())
+						}
+						_, ok := dp.Attributes().Get("id")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("name")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("parent")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("state")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("type")
+						assert.False(t, ok)
+					}
 				case "hw.temperature":
-					assert.False(t, validatedMetrics["hw.temperature"], "Found a duplicate in the metrics slice: hw.temperature")
-					validatedMetrics["hw.temperature"] = true
-					assert.Equal(t, pmetric.MetricTypeGauge, mi.Type())
-					assert.Equal(t, 1, mi.Gauge().DataPoints().Len())
-					assert.Equal(t, "Temperature in degrees Celsius.", mi.Description())
-					assert.Equal(t, "Cel", mi.Unit())
-					dp := mi.Gauge().DataPoints().At(0)
-					assert.Equal(t, start, dp.StartTimestamp())
-					assert.Equal(t, ts, dp.Timestamp())
-					assert.Equal(t, pmetric.NumberDataPointValueTypeDouble, dp.ValueType())
-					assert.InDelta(t, float64(1), dp.DoubleValue(), 0.01)
-					attrVal, ok := dp.Attributes().Get("id")
-					assert.True(t, ok)
-					assert.Equal(t, "id-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("name")
-					assert.True(t, ok)
-					assert.Equal(t, "name-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("parent")
-					assert.True(t, ok)
-					assert.Equal(t, "parent-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("sensor_location")
-					assert.True(t, ok)
-					assert.Equal(t, "sensor_location-val", attrVal.Str())
+					if tt.name != "reaggregate_set" {
+						assert.False(t, validatedMetrics["hw.temperature"], "Found a duplicate in the metrics slice: hw.temperature")
+						validatedMetrics["hw.temperature"] = true
+						assert.Equal(t, pmetric.MetricTypeGauge, mi.Type())
+						assert.Equal(t, 1, mi.Gauge().DataPoints().Len())
+						assert.Equal(t, "Temperature in degrees Celsius.", mi.Description())
+						assert.Equal(t, "Cel", mi.Unit())
+						dp := mi.Gauge().DataPoints().At(0)
+						assert.Equal(t, start, dp.StartTimestamp())
+						assert.Equal(t, ts, dp.Timestamp())
+						assert.Equal(t, pmetric.NumberDataPointValueTypeDouble, dp.ValueType())
+						assert.InDelta(t, float64(1), dp.DoubleValue(), 0.01)
+						idAttrVal, ok := dp.Attributes().Get("id")
+						assert.True(t, ok)
+						assert.Equal(t, "id-val", idAttrVal.Str())
+						nameAttrVal, ok := dp.Attributes().Get("name")
+						assert.True(t, ok)
+						assert.Equal(t, "name-val", nameAttrVal.Str())
+						parentAttrVal, ok := dp.Attributes().Get("parent")
+						assert.True(t, ok)
+						assert.Equal(t, "parent-val", parentAttrVal.Str())
+						sensorLocationAttrVal, ok := dp.Attributes().Get("sensor_location")
+						assert.True(t, ok)
+						assert.Equal(t, "sensor_location-val", sensorLocationAttrVal.Str())
+					} else {
+						assert.False(t, validatedMetrics["hw.temperature"], "Found a duplicate in the metrics slice: hw.temperature")
+						validatedMetrics["hw.temperature"] = true
+						assert.Equal(t, pmetric.MetricTypeGauge, mi.Type())
+						assert.Equal(t, 1, mi.Gauge().DataPoints().Len())
+						assert.Equal(t, "Temperature in degrees Celsius.", mi.Description())
+						assert.Equal(t, "Cel", mi.Unit())
+						dp := mi.Gauge().DataPoints().At(0)
+						assert.Equal(t, start, dp.StartTimestamp())
+						assert.Equal(t, ts, dp.Timestamp())
+						assert.Equal(t, pmetric.NumberDataPointValueTypeDouble, dp.ValueType())
+						switch aggMap["hw.temperature"] {
+						case "sum":
+							assert.InDelta(t, float64(4), dp.DoubleValue(), 0.01)
+						case "avg":
+							assert.InDelta(t, float64(2), dp.DoubleValue(), 0.01)
+						case "min":
+							assert.InDelta(t, float64(1), dp.DoubleValue(), 0.01)
+						case "max":
+							assert.InDelta(t, float64(3), dp.DoubleValue(), 0.01)
+						}
+						_, ok := dp.Attributes().Get("id")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("name")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("parent")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("sensor_location")
+						assert.False(t, ok)
+					}
 				case "hw.temperature.limit":
-					assert.False(t, validatedMetrics["hw.temperature.limit"], "Found a duplicate in the metrics slice: hw.temperature.limit")
-					validatedMetrics["hw.temperature.limit"] = true
-					assert.Equal(t, pmetric.MetricTypeGauge, mi.Type())
-					assert.Equal(t, 1, mi.Gauge().DataPoints().Len())
-					assert.Equal(t, "Temperature limit in degrees Celsius.", mi.Description())
-					assert.Equal(t, "Cel", mi.Unit())
-					dp := mi.Gauge().DataPoints().At(0)
-					assert.Equal(t, start, dp.StartTimestamp())
-					assert.Equal(t, ts, dp.Timestamp())
-					assert.Equal(t, pmetric.NumberDataPointValueTypeDouble, dp.ValueType())
-					assert.InDelta(t, float64(1), dp.DoubleValue(), 0.01)
-					attrVal, ok := dp.Attributes().Get("id")
-					assert.True(t, ok)
-					assert.Equal(t, "id-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("limit_type")
-					assert.True(t, ok)
-					assert.Equal(t, "high.critical", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("name")
-					assert.True(t, ok)
-					assert.Equal(t, "name-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("parent")
-					assert.True(t, ok)
-					assert.Equal(t, "parent-val", attrVal.Str())
-					attrVal, ok = dp.Attributes().Get("sensor_location")
-					assert.True(t, ok)
-					assert.Equal(t, "sensor_location-val", attrVal.Str())
+					if tt.name != "reaggregate_set" {
+						assert.False(t, validatedMetrics["hw.temperature.limit"], "Found a duplicate in the metrics slice: hw.temperature.limit")
+						validatedMetrics["hw.temperature.limit"] = true
+						assert.Equal(t, pmetric.MetricTypeGauge, mi.Type())
+						assert.Equal(t, 1, mi.Gauge().DataPoints().Len())
+						assert.Equal(t, "Temperature limit in degrees Celsius.", mi.Description())
+						assert.Equal(t, "Cel", mi.Unit())
+						dp := mi.Gauge().DataPoints().At(0)
+						assert.Equal(t, start, dp.StartTimestamp())
+						assert.Equal(t, ts, dp.Timestamp())
+						assert.Equal(t, pmetric.NumberDataPointValueTypeDouble, dp.ValueType())
+						assert.InDelta(t, float64(1), dp.DoubleValue(), 0.01)
+						idAttrVal, ok := dp.Attributes().Get("id")
+						assert.True(t, ok)
+						assert.Equal(t, "id-val", idAttrVal.Str())
+						limitTypeAttrVal, ok := dp.Attributes().Get("limit_type")
+						assert.True(t, ok)
+						assert.Equal(t, "high.critical", limitTypeAttrVal.Str())
+						nameAttrVal, ok := dp.Attributes().Get("name")
+						assert.True(t, ok)
+						assert.Equal(t, "name-val", nameAttrVal.Str())
+						parentAttrVal, ok := dp.Attributes().Get("parent")
+						assert.True(t, ok)
+						assert.Equal(t, "parent-val", parentAttrVal.Str())
+						sensorLocationAttrVal, ok := dp.Attributes().Get("sensor_location")
+						assert.True(t, ok)
+						assert.Equal(t, "sensor_location-val", sensorLocationAttrVal.Str())
+					} else {
+						assert.False(t, validatedMetrics["hw.temperature.limit"], "Found a duplicate in the metrics slice: hw.temperature.limit")
+						validatedMetrics["hw.temperature.limit"] = true
+						assert.Equal(t, pmetric.MetricTypeGauge, mi.Type())
+						assert.Equal(t, 1, mi.Gauge().DataPoints().Len())
+						assert.Equal(t, "Temperature limit in degrees Celsius.", mi.Description())
+						assert.Equal(t, "Cel", mi.Unit())
+						dp := mi.Gauge().DataPoints().At(0)
+						assert.Equal(t, start, dp.StartTimestamp())
+						assert.Equal(t, ts, dp.Timestamp())
+						assert.Equal(t, pmetric.NumberDataPointValueTypeDouble, dp.ValueType())
+						switch aggMap["hw.temperature.limit"] {
+						case "sum":
+							assert.InDelta(t, float64(4), dp.DoubleValue(), 0.01)
+						case "avg":
+							assert.InDelta(t, float64(2), dp.DoubleValue(), 0.01)
+						case "min":
+							assert.InDelta(t, float64(1), dp.DoubleValue(), 0.01)
+						case "max":
+							assert.InDelta(t, float64(3), dp.DoubleValue(), 0.01)
+						}
+						_, ok := dp.Attributes().Get("id")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("limit_type")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("name")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("parent")
+						assert.False(t, ok)
+						_, ok = dp.Attributes().Get("sensor_location")
+						assert.False(t, ok)
+					}
 				}
 			}
 		})
