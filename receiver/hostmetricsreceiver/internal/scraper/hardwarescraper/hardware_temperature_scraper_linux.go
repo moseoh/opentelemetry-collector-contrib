@@ -92,7 +92,7 @@ func (s *hardwareTemperatureScraper) scrape(_ context.Context, mb *metadata.Metr
 				errors.AddPartial(hardwareTemperatureMetricsLen, fmt.Errorf("failed to read temperature for %s: %w", sensor.label, err))
 				continue
 			}
-			mb.RecordHwTemperatureDataPoint(now, tempCelsius, sensor.id, sensor.label, sensor.deviceName, sensor.location)
+			mb.RecordHwTemperatureDataPoint(now, tempCelsius, sensor.id, sensor.label, sensor.parent, sensor.location)
 		}
 	}
 
@@ -114,13 +114,13 @@ type temperatureLimits struct {
 }
 
 type sensorInfo struct {
-	id         string
-	label      string
-	deviceName string
-	location   string
-	hwmonDir   string
-	sensorNum  string
-	tempFile   string
+	id        string
+	label     string
+	parent    string
+	location  string
+	hwmonDir  string
+	sensorNum string
+	tempFile  string
 }
 
 func (s *hardwareTemperatureScraper) scanTemperatureSensors() ([]sensorInfo, error) {
@@ -167,6 +167,18 @@ func (*hardwareTemperatureScraper) readTemperatureCelsius(file string) (float64,
 	return float64(tempMilliCelsius) / 1000.0, nil
 }
 
+// deviceKey returns a stable per-device identifier for a hwmon directory so that
+// distinct devices sharing the same name (e.g. multiple NVMe drives) do not
+// collide. It resolves the underlying device path, which is stable across reboots
+// (e.g. a PCI address), and falls back to the hwmon directory name when there is
+// no device link (e.g. some virtual sensors).
+func deviceKey(hwmonDir string) string {
+	if target, err := filepath.EvalSymlinks(filepath.Join(hwmonDir, "device")); err == nil {
+		return filepath.Base(target)
+	}
+	return filepath.Base(hwmonDir)
+}
+
 func (s *hardwareTemperatureScraper) buildSensorInfo(tempFile, deviceName string) (sensorInfo, error) {
 	baseName := filepath.Base(tempFile)
 	sensorNum := extractSensorNumber(baseName)
@@ -181,14 +193,17 @@ func (s *hardwareTemperatureScraper) buildSensorInfo(tempFile, deviceName string
 		return sensorInfo{}, fmt.Errorf("sensor %s filtered out", sensorLabel)
 	}
 
+	hwmonDir := filepath.Dir(tempFile)
+	deviceID := fmt.Sprintf("%s_%s", deviceName, deviceKey(hwmonDir))
+
 	sensor := sensorInfo{
-		id:         fmt.Sprintf("%s_temp%s", deviceName, sensorNum),
-		label:      sensorLabel,
-		deviceName: deviceName,
-		location:   fmt.Sprintf("%s_TEMP%s", strings.ToUpper(deviceName), sensorNum),
-		hwmonDir:   filepath.Dir(tempFile),
-		sensorNum:  sensorNum,
-		tempFile:   tempFile,
+		id:        fmt.Sprintf("%s_temp%s", deviceID, sensorNum),
+		label:     sensorLabel,
+		parent:    deviceID,
+		location:  fmt.Sprintf("%s_TEMP%s", strings.ToUpper(deviceID), sensorNum),
+		hwmonDir:  hwmonDir,
+		sensorNum: sensorNum,
+		tempFile:  tempFile,
 	}
 
 	return sensor, nil
@@ -239,7 +254,7 @@ func (*hardwareTemperatureScraper) recordTemperatureLimits(now pcommon.Timestamp
 				sensor.id,
 				metadata.MapAttributeLimitType[info.limitType],
 				sensor.label,
-				sensor.deviceName,
+				sensor.parent,
 				sensor.location,
 			)
 		}

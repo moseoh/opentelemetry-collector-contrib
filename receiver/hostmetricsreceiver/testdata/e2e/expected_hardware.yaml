@@ -16,30 +16,30 @@ resourceMetrics:
                   attributes:
                     - key: id
                       value:
-                        stringValue: nvme_temp1
+                        stringValue: nvme_hwmon0_temp1
                     - key: name
                       value:
                         stringValue: Composite
                     - key: parent
                       value:
-                        stringValue: nvme
+                        stringValue: nvme_hwmon0
                     - key: sensor_location
                       value:
-                        stringValue: NVME_TEMP1
+                        stringValue: NVME_HWMON0_TEMP1
                 - asDouble: 72
                   attributes:
                     - key: id
                       value:
-                        stringValue: amdgpu_temp1
+                        stringValue: amdgpu_hwmon1_temp1
                     - key: name
                       value:
                         stringValue: edge
                     - key: parent
                       value:
-                        stringValue: amdgpu
+                        stringValue: amdgpu_hwmon1
                     - key: sensor_location
                       value:
-                        stringValue: AMDGPU_TEMP1
+                        stringValue: AMDGPU_HWMON1_TEMP1
           - name: hw.temperature.limit
             description: Temperature limit in degrees Celsius.
             unit: Cel
@@ -49,7 +49,7 @@ resourceMetrics:
                   attributes:
                     - key: id
                       value:
-                        stringValue: nvme_temp1
+                        stringValue: nvme_hwmon0_temp1
                     - key: limit_type
                       value:
                         stringValue: high.critical
@@ -58,15 +58,15 @@ resourceMetrics:
                         stringValue: Composite
                     - key: parent
                       value:
-                        stringValue: nvme
+                        stringValue: nvme_hwmon0
                     - key: sensor_location
                       value:
-                        stringValue: NVME_TEMP1
+                        stringValue: NVME_HWMON0_TEMP1
                 - asDouble: 85
                   attributes:
                     - key: id
                       value:
-                        stringValue: nvme_temp1
+                        stringValue: nvme_hwmon0_temp1
                     - key: limit_type
                       value:
                         stringValue: high.degraded
@@ -75,15 +75,15 @@ resourceMetrics:
                         stringValue: Composite
                     - key: parent
                       value:
-                        stringValue: nvme
+                        stringValue: nvme_hwmon0
                     - key: sensor_location
                       value:
-                        stringValue: NVME_TEMP1
+                        stringValue: NVME_HWMON0_TEMP1
                 - asDouble: 95
                   attributes:
                     - key: id
                       value:
-                        stringValue: amdgpu_temp1
+                        stringValue: amdgpu_hwmon1_temp1
                     - key: limit_type
                       value:
                         stringValue: high.critical
@@ -92,7 +92,7 @@ resourceMetrics:
                         stringValue: edge
                     - key: parent
                       value:
-                        stringValue: amdgpu
+                        stringValue: amdgpu_hwmon1
                     - key: sensor_location
                       value:
-                        stringValue: AMDGPU_TEMP1
+                        stringValue: AMDGPU_HWMON1_TEMP1
